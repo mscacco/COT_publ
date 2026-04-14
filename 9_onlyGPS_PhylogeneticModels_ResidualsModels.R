@@ -83,7 +83,7 @@ identical(rownames(data), tree$tip.label)
 
 # flap soar as factor
 data$X2 <- factor(data$X2, levels=c("flap","soar"))
-table(data$X2) # only 15 flappers because the 2 bat species get excluded
+table(data$X2) # only 16 flappers because the 2 bat species get excluded
 
 
 #___________________________
@@ -93,7 +93,7 @@ model_w <- phylolm(Y_w ~ X1 * X2,
                  data, phy=tree, model="lambda") # Pagel's lambda model
 (summ_w <- summary(model_w))
 hist(residuals(model_w))
-R2_lik(model)
+R2_lik(model_w)
 
 # Extract coefficients for plotting
 summ_w[["coefficients"]]

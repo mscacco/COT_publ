@@ -199,9 +199,6 @@ dev.off()
 
 
 # Plot one classified histogram per study
-
-finalDf <- readRDS("DataFinalSummary/allStudies_allTags_VedbaGs_March2024_filteredSpecies_flappingProbs.rds")
-
 group <- paste(finalDf$study.name, finalDf$individual.taxon.canonical.name, sep="_")
 studiesLS <- split(finalDf, group)
 

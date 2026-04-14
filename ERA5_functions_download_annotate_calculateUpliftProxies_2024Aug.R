@@ -403,20 +403,6 @@ era5_convective <- function(phi, t_blh, p_blh, q_blh, t0, p0, m_flux, sh_flux) {
 #____________________________
 # Orographic uplift (w oro):
 
-# ## Orographic uplift test
-# asp <- seq(0,360,45) * pi / 180
-# b <- seq(0,360,45) * pi / 180
-# slop <- seq(0,45,5) * pi / 180
-# ws <- seq(0,40,10)
-# test <- expand.grid(asp, b, slop, ws)
-# names(test) <- c("aspect","beta","slope","windSpeed")
-# summary(sin(test$slope))
-# test$Ca <- sin(test$slope) * cos(test$aspect-test$beta)
-# test$wOro <- test$windSpeed * test$Ca
-# summary(test[,c("Ca","wOro")])
-# test[test$Ca < 0,]
-
-
 ## Aspect angles conversions:
 
 angles_to_cartesian <- function(x) { # x is a raster of angles
@@ -432,25 +418,44 @@ cartesian_to_angles <- function(x_sin, x_cos) { # sin and cosin from which we wa
 }
 
 ## w_oro calculation:
-
-oroUplift <- function(u, v, slope, aspect) {
-  
+oroUplift <- function(u, v, slope_rad, aspect_rad) {
   # Where:
-  # u and v are the two vector components of wind at 10 m above the surface (era5 single level variables)
-  # slope is the angle of the slope in radians (theta)
-  # aspect is the aspect of the slope in radians between 0 and 2pi (alpha)
+  # u: eastward wind component (m/s) at the surface (10 m)
+  # v: northward wind component (m/s) at the surface (10 m)
+  # slope_rad: angle of the slope in radians (theta)
+  # aspect_rad: aspect of the slope in radians between 0 and 2pi (alpha)
   
   # Calculate horizontal wind speed (ws) and wind direction FROM (beta):
   ws <- sqrt(u^2 + v^2) # wind speed at 10 m height, in m/s
   beta <- atan2(u, v) + pi # wind dir at 10 m, blowing FROM, in rad between 0 and 2pi
 
   # Calculate Ca, the lifting coefficient (if the slope value is 0, the whole Ca coefficient will be 0, so flat slopes have no oro uplift): Ca <- sin(theta) * cos(alpha - beta)
-  Ca <- sin(slope) * cos(aspect - beta) 
+  Ca <- sin(slope_rad) * cos(aspect_rad - beta) 
   # Calculate the orographic uplift according to Brandes et al (2004) and Bohrer et al (2012)
   oroUpl <- ws * Ca
   
   return(oroUpl)
 }
+
+# ## Orographic uplift test
+# test_points <- tibble::tibble(
+#   slope = rep(45, 4),        # 45 degrees
+#   aspect = c(0, 0, 90, 90),  # slope facing north or east
+#   # U and V combinations giving wind blowing from North, from South, from East and from West 
+#   U = c(0, 0, 10, -10),               # east-west component
+#   V = c(10, -10, 0, 0)                # north-south component
+# )
+# 
+# test_points$woro <- oroUplift(u = test_points$U,
+#                               v = test_points$V,
+#                               slope = (test_points$slope * pi / 180), # in rad
+#                               aspect = (test_points$aspect * pi / 180)) # in rad between 0 and 2pi
+# test_points
+
+
+#_________________
+# Wind variables:
+
 
 windSpeed <- function(u, v) {
   return(sqrt(u^2 + v^2))
