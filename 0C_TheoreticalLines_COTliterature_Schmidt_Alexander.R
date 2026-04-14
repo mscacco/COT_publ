@@ -27,6 +27,10 @@ theoreticalCOTschmidt$speed_ms <- theoreticalCOTschmidt$speed_kmh / 3.6
 theoreticalCOTschmidt$COTflight_J_KgM <- 
   theoreticalCOTschmidt$MetRateFlight_W_kg/theoreticalCOTschmidt$speed_ms
 
+mod <- lm(log(COTflight_J_KgM)~log(bodyMass_Kg), data=theoreticalCOTschmidt)
+summary(mod)
+# that translates to: 
+#COTflight_schmidt <- 5.40 * bodyMass_Kg^(-0.2439)
 
 #_________________________
 # Based on ALEXANDER 2003
@@ -96,4 +100,14 @@ summary(modBats)
 # a 1% increase in body mass causes about 0.78% increase in metabolic rate in birds and a 0.79% in bats
 
 save(modBirds,modBats,betaMassBi,betaMassBa, file = "DataFinalSummary/flappingModel_KylesData.RData")
+
+# Now run the same models, but adding the method of MR calculation as covariate:
+table(flappers$Method)
+flappers_sub <- flappers[flappers$Method %in% c("r","m","d"),]
+modBirds_met <- lm(log(MetaRate)~log_bodyMass_Kg + Method, data=flappers_sub[flappers_sub$Taxon != "Bat",])
+summary(modBirds_met)
+modBats_met <- lm(log(MetaRate)~log_bodyMass_Kg + Method, data=flappers_sub[flappers_sub$Taxon == "Bat",])
+summary(modBats_met)
+
+
 
