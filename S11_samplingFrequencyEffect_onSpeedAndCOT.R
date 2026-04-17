@@ -214,7 +214,8 @@ summary(phylolm(Y_sp ~ X1 * X2, data_HR, phy = tree_HR, model="lambda"))
 # Plot of phylo model predicting the allometry of cc-speed on full dataset
 
 plot_full <- ggplot(data, aes(x=X1, y=Y_sp, col=X2)) +
-  xlab("log Body Mass (kg)") + ylab("log Cross-country speed (m/s)") + xlim(c(-1, 2.8)) +
+  xlab("Body mass (kg, log scale)") + ylab("Cross-country speed (m/s, log scale)") + 
+  xlim(c(-1, 2.8)) + coord_cartesian(ylim = c(1.35, 2.65)) +
   # Add regression lines from your model
   geom_abline(intercept = 2.017353, slope = 0.102671, color = "gold2") +  # flappers
   geom_abline(intercept = 2.017353 - 0.411328,
@@ -237,7 +238,7 @@ plot_full <- ggplot(data, aes(x=X1, y=Y_sp, col=X2)) +
   )
 
 plot_HR <- ggplot(data_HR, aes(x=X1, y=Y_sp, col=X2)) +
-  xlab("log Body Mass (kg)") + ylab("log Cross-country speed (m/s)") + xlim(c(-1, 2.8)) +
+  xlab("Body mass (kg, log scale)") + ylab("Cross-country speed (m/s, log scale)") + 
   # Add regression lines from your model
   geom_abline(intercept = 2.022854, slope = 0.123005, color = "gold2") +  # flappers
   geom_abline(intercept = 2.102601 - 0.402502,
@@ -313,19 +314,46 @@ slopeSoar <- slopeFlap + summ_hr[["coefficients"]]["X1:X2soar",1] # effect of bo
 
 modelCoefficients <- cbind(intFlap,intSoar,slopeFlap,slopeSoar)
 
+# Compute body mass ranges per group from data
+flap_xrange <- range(data$X1[data$X2 == "flap"])
+soar_xrange <- range(data$X1[data$X2 == "soar"])
+
 
 plot_full_COT <- ggplot(data, aes(x=X1, y=Y, col=X2)) +
-  xlab("log Body Mass (kg)") + ylab("log effective COT (J kg-1 m-1)") + xlim(c(-1, 2.8)) +
-  # Add regression lines from your model
-  geom_abline(intercept = 1.587056, slope = -0.328447, color = "gold2") +  # flappers
+  xlab("Body mass (kg)") + ylab("Effective COT (J kg⁻¹ m⁻¹)") + 
+  xlim(c(-1, 2.8)) + coord_cartesian(ylim = c(-1.3, 3)) +
+  scale_y_continuous(
+    labels = function(x) round(exp(x), 1),
+    breaks = log(c(4, 5, 7, 10, 15))  # choose breaks on real scale, log-transform them
+  ) + # tick labels on real unit but plotted on log scale
+  scale_x_continuous(
+    labels = function(x) round(exp(x), 1),
+    breaks = log(c(4, 5, 7, 10, 15))  # choose breaks on real scale, log-transform them
+  ) +
+  # Add regression lines manually from model
+  geom_abline(intercept = 1.587056, slope = -0.328447, color = "goldenrod2") +  # flappers
   geom_abline(intercept = 1.587056 - 0.328447,
               slope = -0.328447 -0.376582,
               color = "dodgerblue2") +  # soarers
+  
+  # Draw segments instead of ablines to respect the x-y range of the observations
+  geom_segment(aes(
+    x    = flap_xrange[1],
+    xend = flap_xrange[2],
+    y    = int_flap + slp_flap * flap_xrange[1],
+    yend = int_flap + slp_flap * flap_xrange[2]),
+    colour = "dodgerblue2", linewidth = 0.7, inherit.aes = FALSE) +
+  geom_segment(aes(
+    x    = soar_xrange[1],
+    xend = soar_xrange[2],
+    y    = int_soar + slp_soar * soar_xrange[1],
+    yend = int_soar + slp_soar * soar_xrange[2]), 
+    colour = "goldenrod2", linewidth = 0.7, inherit.aes = FALSE) +
   # Add species labels
   geom_text(aes(label = Z),
             hjust = -0.1, vjust = 0.5,
             size = 3, show.legend = FALSE) +
-  geom_point() + scale_color_manual(values=c("gold2","dodgerblue2")) +
+  geom_point() + scale_color_manual(values=c("goldenrod2","dodgerblue2")) +
   theme_classic(base_size = 9) +
   theme(
     plot.title       = element_text(size = 9, face = "plain", hjust = 0, margin = margin(b = 4)),
@@ -338,7 +366,8 @@ plot_full_COT <- ggplot(data, aes(x=X1, y=Y, col=X2)) +
   )
 
 plot_HR_COT <- ggplot(data_HR, aes(x=X1, y=Y, col=X2)) +
-  xlab("log Body Mass (kg)") + ylab("log effective COT (J kg-1 m-1)") + xlim(c(-1, 2.8)) +
+  xlab("Body mass (kg, log scale)") + ylab("Effective COT (J kg⁻¹ m⁻¹, log scale)") + 
+  xlim(c(-1, 2.8)) +
   # Add regression lines from your model
   geom_abline(intercept = 1.694600, slope = -0.469935, color = "gold2") +  # flappers
   geom_abline(intercept = 1.694600 - 0.865445,
