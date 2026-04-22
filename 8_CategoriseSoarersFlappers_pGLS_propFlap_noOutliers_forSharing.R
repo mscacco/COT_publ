@@ -364,3 +364,33 @@ table(summarise(group_by(allSegmDfs_soarFlap, species_phy), unique(soarFlap_pgls
 
 # re-save the original dataset with the added soar/flap categories
 saveRDS(allSegmDfs_soarFlap, file="finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.rds")
+
+#____________
+# Table S4
+# Quick summary per species
+perInd <- allSegmDfs_soarFlap %>% group_by(individualID, species_phy) %>%
+  summarise(soarFlap = unique(soarFlap_pgls),
+            wingArea = unique(wingArea_ellipse_cm2),
+            bodymass_kg = unique(Body_mass_kg),
+            BMR = unique(BMR_W),
+            pFlap_avg = mean(avg_probFlap, na.rm=T), # arithmetic mean
+            ccspeed_avg = mean(avg_grSpeed_ms, na.rm=T),
+            eCOT_avg = mean(obs_tot_COT_J_KgM, na.rm=T),  # arithmetic mean
+            pFlap_geom = mean(log(avg_probFlap), na.rm=T), # geometric mean
+            eCOT_geom = mean(log(obs_tot_COT_J_KgM), na.rm=T)) # geometric mean
+
+perSP <- perInd %>% group_by(species_phy) %>% 
+  summarise(soarFlap = unique(soarFlap),
+            wingArea = unique(wingArea),
+            bodymass_kg = unique(bodymass_kg),
+            BMR = unique(BMR),
+            pFlap_avg = mean(pFlap_avg, na.rm=T), # arithmetic mean
+            ccspeed_avg = mean(ccspeed_avg, na.rm=T),
+            eCOT_avg = mean(eCOT_avg, na.rm=T),  # arithmetic mean
+            pFlap_geom = mean(pFlap_geom, na.rm=T), # geometric mean
+            eCOT_geom = mean(eCOT_geom, na.rm=T)) %>%
+  arrange(as.character(species_phy)) %>%
+  as.data.frame()
+
+perSP
+

@@ -239,6 +239,7 @@ map <- ggplot() +
 map
 
 # save for inkscape
+library(svglite)
 ggsave("Revision/NewSupplFigures/globalMap/newMap1_commuting.svg",
   plot = map, device = svglite, width = 10, height = 6)
 
@@ -246,31 +247,6 @@ ggsave("Revision/NewSupplFigures/globalMap/newMap1_commuting.svg",
 # Inset of selected species/dataset
 
 unique(lines_inset$study_species)
-
-# For Sula
-s <- "AllisonPatterson_PEBO_Sula variegata"
-lines_s <- filter(lines_inset, study_species == s)
-segms_s <- filter(commuting_inset, study_species == s)
-
-col <- finalPalette[names(finalPalette) == s]
-
-# crop right extent
-bb1 <- ext_to_bb(x=lines_s, f=0.2)
-world_bb <- st_crop(world, bb1)
-
-zoom_sula <- ggplot() +
-  geom_sf(data = world_bb, fill = "grey90", color = "grey50", linewidth = 0.2) +
-  geom_sf(data = lines_s, color = col, linewidth = 0.5, alpha = 0.8) +
-  #geom_sf(data = segms_s, color = col, linewidth = 0.5, alpha = 0.8) +
-  geom_sf(data = bb1, fill = NA, color = "black", linewidth = 0.3, alpha = 0.8) +
-  coord_sf(clip = "on") +
-  theme_void() +
-  theme(legend.position = "none")
-zoom_sula
-
-ggsave("Revision/NewSupplFigures/globalMap/insetSula.svg",
-       plot = zoom_sula, device = svglite, width = 5, height = 6)
-
 
 # For turkey vulture
 s <- "Cathartes aura MPIAB Cuba_Cathartes aura"
@@ -294,7 +270,7 @@ ggsave("Revision/NewSupplFigures/globalMap/insetTurkey.svg",
        plot = zoom2, device = svglite, width = 5, height = 2)
 
 
-# For black legged kittywake
+# For black legged kittiwake
 s <- "AllisonPatterson_BLKI_Rissa tridactyla"
 lines_s <- filter(lines_inset, study_species == s)
 #commuting_s <- filter(commuting_inset, , study_species == s)
@@ -316,10 +292,35 @@ zoom3
 ggsave("Revision/NewSupplFigures/globalMap/insetKitty.svg",
        plot = zoom3, device = svglite, width = 5, height = 3)
 
+# # For Sula
+# s <- "AllisonPatterson_PEBO_Sula variegata"
+# lines_s <- filter(lines_inset, study_species == s)
+# segms_s <- filter(commuting_inset, study_species == s)
+# 
+# col <- finalPalette[names(finalPalette) == s]
+# 
+# # crop right extent
+# bb1 <- ext_to_bb(x=lines_s, f=0.2)
+# world_bb <- st_crop(world, bb1)
+# 
+# zoom_sula <- ggplot() +
+#   geom_sf(data = world_bb, fill = "grey90", color = "grey50", linewidth = 0.2) +
+#   geom_sf(data = lines_s, color = col, linewidth = 0.5, alpha = 0.8) +
+#   #geom_sf(data = segms_s, color = col, linewidth = 0.5, alpha = 0.8) +
+#   geom_sf(data = bb1, fill = NA, color = "black", linewidth = 0.3, alpha = 0.8) +
+#   coord_sf(clip = "on") +
+#   theme_void() +
+#   theme(legend.position = "none")
+# zoom_sula
+# 
+# ggsave("Revision/NewSupplFigures/globalMap/insetSula.svg",
+#        plot = zoom_sula, device = svglite, width = 5, height = 6)
+
+
 
 # Add box of the three insets to the world map
 map_bbox <- map + 
-  geom_sf(data = bb1, fill = NA, color = "black", linewidth = 0.3) +
+  #geom_sf(data = bb1, fill = NA, color = "black", linewidth = 0.3) +
   geom_sf(data = bb2, fill = NA, color = "black", linewidth = 0.3) +
   geom_sf(data = bb3, fill = NA, color = "black", linewidth = 0.3)
 map_bbox

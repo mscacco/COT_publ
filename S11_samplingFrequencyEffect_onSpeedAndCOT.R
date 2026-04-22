@@ -214,8 +214,11 @@ summary(phylolm(Y_sp ~ X1 * X2, data_HR, phy = tree_HR, model="lambda"))
 # Plot of phylo model predicting the allometry of cc-speed on full dataset
 
 plot_full <- ggplot(data, aes(x=X1, y=Y_sp, col=X2)) +
-  xlab("Body mass (kg, log scale)") + ylab("Cross-country speed (m/s, log scale)") + 
-  xlim(c(-1, 2.8)) + coord_cartesian(ylim = c(1.35, 2.65)) +
+  xlab("Body mass as log(x in kg)") + ylab("Cross-country speed (m/s)") +
+  coord_cartesian(xlim = c(-1, 2.8), ylim = c(1.09, 2.7)) +
+  scale_y_continuous(
+    labels = function(x) round(exp(x), 1),
+    breaks = log(c(3, 6, 9, 12, 15))) +  # choose breaks on real scale, log-transform them
   # Add regression lines from your model
   geom_abline(intercept = 2.017353, slope = 0.102671, color = "gold2") +  # flappers
   geom_abline(intercept = 2.017353 - 0.411328,
@@ -238,7 +241,12 @@ plot_full <- ggplot(data, aes(x=X1, y=Y_sp, col=X2)) +
   )
 
 plot_HR <- ggplot(data_HR, aes(x=X1, y=Y_sp, col=X2)) +
-  xlab("Body mass (kg, log scale)") + ylab("Cross-country speed (m/s, log scale)") + 
+  xlab("Body mass as log(x in kg)") + ylab("Cross-country speed (m/s)") + # log scale
+  coord_cartesian(xlim = c(-1, 2.8), ylim = c(1.09, 2.7)) +
+  scale_y_continuous(
+    labels = function(x) round(exp(x), 1),
+    breaks = log(c(3, 6, 9, 12, 15))) +
+    #breaks = log(c(3, 5, 9, 15.5))) +  # choose breaks on real scale, log-transform them
   # Add regression lines from your model
   geom_abline(intercept = 2.022854, slope = 0.123005, color = "gold2") +  # flappers
   geom_abline(intercept = 2.102601 - 0.402502,
@@ -262,7 +270,7 @@ plot_HR <- ggplot(data_HR, aes(x=X1, y=Y_sp, col=X2)) +
 
 library(patchwork)
 pdf("Revision/NewSupplFigures/phylolm_ccspeed_bodymass_highRes.pdf", width = 18,height = 6)
-(plot_full | plot_HR) + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+(plot_full | plot_HR) + plot_layout(guides = "collect") & theme(legend.position = "none")
 dev.off()
 
 
@@ -320,7 +328,7 @@ soar_xrange <- range(data$X1[data$X2 == "soar"])
 
 
 plot_full_COT <- ggplot(data, aes(x=X1, y=Y, col=X2)) +
-  xlab("Body mass (kg)") + ylab("Effective COT (J kg⁻¹ m⁻¹)") + 
+  xlab("Body mass as log(x in kg)") + ylab("Effective COT \n log(geometric mean of X in J kg⁻¹ m⁻¹)") + 
   xlim(c(-1, 2.8)) + coord_cartesian(ylim = c(-1.3, 3)) +
   scale_y_continuous(
     labels = function(x) round(exp(x), 1),
@@ -366,7 +374,7 @@ plot_full_COT <- ggplot(data, aes(x=X1, y=Y, col=X2)) +
   )
 
 plot_HR_COT <- ggplot(data_HR, aes(x=X1, y=Y, col=X2)) +
-  xlab("Body mass (kg, log scale)") + ylab("Effective COT (J kg⁻¹ m⁻¹, log scale)") + 
+  xlab("Body mass as log(x in kg)") + ylab("Effective COT \n log(geometric mean of X in J kg⁻¹ m⁻¹)") + 
   xlim(c(-1, 2.8)) +
   # Add regression lines from your model
   geom_abline(intercept = 1.694600, slope = -0.469935, color = "gold2") +  # flappers
