@@ -200,25 +200,50 @@ plot_swim()
 dev.off()
 
 
-### Sanity checks
-# par(mfrow=c(1,2))
-# plot(MRguigueno~seq_mass_kg, type = "l", lwd=2, col="blue",
-#      xlab="Body mass (kg)", ylab="Flapping MR (W)")
-# lines(MRrayner~seq_mass_kg, col = "red", lwd=2)
-# lines(MRalexander_der~seq_mass_kg, col = "darkgrey", lwd=2)
-# legend("topleft",c("COT Alexander 2003 * maxSpeed * Mass", "MR Guigueno 2019", "MR Alexander 1998"),
-#        lty=1,col=c("darkgrey","blue","red"), lwd=2,
-#        bty="n", cex=0.7)
-# 
-# plot(log(COTalexander_der)~log(seq_mass_kg), col="red", type="l", ylab="COT (J km-1 m-1)", lwd=2, ylim=c(0,5))
-# lines(log(COTflight_alex)~log(seq_mass_kg), col="darkgrey", lwd=2)
-# lines(log(COTguigueno)~log(seq_mass_kg), col="blue", lwd=2)
-# lines(log(COTswim_alex)~log(seq_mass_kg), col="cyan", lwd=2)
-# lines(log(COTrun_alex)~log(seq_mass_kg), col="magenta", lwd=2)
-# legend("topleft",c("COT Alexander 2003","MR Guigueno 2019 / (maxSpeed * Mass)", "MR Alexander 1998 / (maxSpeed * Mass)"),
-#        lty=1,col=c("darkgrey", "blue", "red"), lwd=2,
-#        bty="n", cex=0.7)
-###
+#____________________________
+# Vmr from Klein Heerenbrink
+#____________________________
+
+# Derive scaling of maximum range speed according to Klein Heerenbrink framework using afpt 
+
+library(afpt)
+library(readxl)
+library(writexl)
+
+dat <- read_excel("species_morpho_means_forAFPT.xlsx") # file provided in the github folder with scripts
+
+dat$Vmr <- NA_real_
+
+for (i in seq_len(nrow(dat))) {
+  cat("Running species", i, "of", nrow(dat), ":", dat$Species[i], "\n")
+  
+  mass <- dat$Mass[i]
+  span <- dat$`Wing span`[i]
+  area <- dat$`Wing area`[i]
+  
+  if (any(is.na(c(mass, span, area))) || any(c(mass, span, area) <= 0)) {
+    dat$Vmr[i] <- NA_real_
+    next
+  }
+  
+  b <- Bird(
+    massTotal = mass,
+    wingSpan = span,
+    wingArea = area,
+    name = dat$Species[i]
+  )
+  
+  fp <- computeFlightPerformance(b)
+  dat$Vmr[i] <- fp$table["maximumRange", "speed"]
+}
+
+
+mod <- lm(log(Vmr) ~ log(Mass), dat)
+summary(mod)
+# this is equivalent to: Vmr = 15.41 M^(0.159)
+
+
+write_xlsx(dat, "species_with_vmr.xlsx")
 
 
 #________________________________________________
