@@ -330,7 +330,20 @@ dummyDf_prop$MR_flap_guigueno2019 <- exp(predict(modBirds, newdata = data.frame(
 # Alexander gives us a COT in J/(kg m) of 3.6 * Mass^(-0.31)
 # to convert to Watts (J/s) we need (3.6 * Mass^(-0.31)) * Mass * Speed
 # which simplified becomes 3.6 * Speed * Mass^(0.69). If we use the median speed in our dataset (8 m/s) we obtain a coefficient of 28.8 * Mass^(0.69)
-dummyDf_prop$MR_flap_alexander2003 <- 3.6 * dummyDf_prop$speed * (dummyDf_prop$mass_kg)^(0.69)
+dummyDf_prop$MR_flap_alexander2003 <- 3.6 * dummyDf_prop$speed * (dummyDf_prop$mass_kg)^(0.69) # this matches the one below, just a sanity check
+
+dummyDf_prop$MR_flap_rayner1995 <- (57 * (dummyDf_prop$mass_kg)^(-0.17)) * dummyDf_prop$mass_kg
+# MR_flap_rayner1995_2 <- (57 * (dummyDf_prop$mass_kg)^(0.83))
+# identical(round(dummyDf_prop$MR_flap_rayner1995,4), round(MR_flap_rayner1995_2,4)) # sanity check
+
+# plot(MR_flap_guigueno2019~mass_kg, data=dummyDf_prop, type = "l", lwd=2, 
+#      xlab="Body mass (kg)", ylab="Flapping MR (W)", ylim=c(1,380))
+# lines(MR_flap_alexander2003~mass_kg, data=dummyDf_prop, col = "darkgrey", lty = 2, lwd=2)
+# lines(MR_flap_rayner1995~mass_kg, data=dummyDf_prop, col = "red", lty = 2, lwd=2)
+# legend("bottomright",c("Guigueno 2019","Alexander 2003","Rayner 1995"),
+#        lty=c(1,2,2),col=c("black","darkgrey","red"), lwd=2,
+#        bty="n", cex=0.7)
+
 
 # use this plot in composite below
 plot_MR <- function(){
