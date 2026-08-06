@@ -4,10 +4,16 @@
 #_________________________________________________________________
 
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
 
-# Load dataset saved in step 3A
-load("DataFinalSummary/allStudies_allTags_allFlightSegments_binded_birdsBats_thresholdClass_transfGs_March2024_noDupl.RData") #object allStudies_noDups
+# create folder to store plots
+dir.create("Plots/ACCsegmentation")
+
+# Import dataset saved at the end of step 3A.
+# This dataset is available in Edmond.
+allStudies_noDups <- readRDS("./BiologgingData/allStudies_allTags_allFlightSegments_binded_birdsBats_thresholdClass_transfGs_March2024_noDupl.rds")
 
 #_________________
 ## Some filtering
@@ -102,8 +108,6 @@ speciesSummary <- finalDf %>%
 # Good, flapping prob and bin contain almost the same information
 speciesSummary %>% print(n=Inf)
 
-# Save summary per species
-write.csv(as.data.frame(speciesSummary), file = "DataFinalSummary/probFlapping_perSpecies_mixR_March2024.csv", row.names = F)
 
 #_______________________________
 ## Tidy up the final dataframe
@@ -120,7 +124,7 @@ table(colsToKeep %in% names(finalDf))
 # height_gener is a generic height column that includes both height.above.msl and height.above.ellipsoid
 # missing values in this column correspond in values that are missing in both the other columns
 # to reduce data loss we will use this generic column for movebank annotation
-# height above ellipsoid and above sea level are not incredibly different so let's pull them together just fore the annotation
+# height above ellipsoid and above sea level can be considered similar at the scale of this analysis, so we pull them together just fore the annotation
 table(finalDf$height.above.msl == finalDf$height_gener)
 table(finalDf$height.above.ellipsoid == finalDf$height_gener)
 table(is.na(finalDf$height_gener))
@@ -142,52 +146,35 @@ finalDf$mergingCol <- 1:nrow(finalDf)
 
 saveRDS(finalDf, file="DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs.rds")
 
+# This is an intermediary dataset that is imported in the next scripts but was not stored in the Edmond repository.
+# In the next scripts, this dataset gets annotated with environmental information 
+# and the resulting dataset, produced in script 5B, was stored in Edmond (file "FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds").
 
-#____________________________________
-## Fancy plotting of VeDBA classification
 
-#pdf(file="Plots/ACCsegmentation/VeDBAsegmentation_allTags_mixR_greyHist.pdf")
-tiff(file="Plots/ACCsegmentation/VeDBAsegmentation_allTags_mixR_greyHist_final.tiff", res=300, width = 7, height = 7, units = "in")
+#_____________________________
+## VeDBA classification Plot
 
-par(mar = c(5, 4, 4, 4) + 0.3) # Additional space for second y-axis
-hist(mod$data, breaks=100, prob=T, xlab="Mean VeDBA (g)", # actual data
-     main="Classification of mean VeDBA for all tags (g)", col="grey")
-# lines(d$x, d$comp[,1], col="blue", lwd=2) #add densities from model
-# lines(d$x, d$comp[,2], col="red", lwd=2)
-abline(v=mu1, lty=1, lwd=2, col="blue") #add means of the distributions calculated by the model
-abline(v=mu2, lty=1, lwd=2, col="red")
-abline(v=antimode, lty=2, lwd=2, col="grey")
-par(new = TRUE)
-plot(sort(mod$data), mod$comp.prob[order(mod$data),1], col="blue", lwd=2, axes=F, xlab="",ylab="", type="l") # add probabilities calculated by the model
-lines(sort(mod$data), mod$comp.prob[order(mod$data),2], col="red", lwd=2)
-axis(side = 4, at = pretty(c(0,1)))      # Add second axis
-mtext("Probability", side = 4, line = 3)   # Add second axis label
-
-dev.off()
-
-# Same but with colors in the histogram
 
 tiff(file="Plots/ACCsegmentation/VeDBAsegmentation_allTags_mixR_colorHist_final.tiff", res=300, width = 7, height = 7, units = "in")
-#pdf(file="Plots/finalPlots/VeDBAsegmentation_allTags_mixR_colorHist_final.pdf", width = 5, height = 5)
 
 par(mar = c(5, 4, 4, 4) + 0.3) # Additional space for second y-axis
 h <- hist(finalDf$meanVedba_Gs, breaks="FD", prob=F, main="VeDBA classification for all devices",
           col="white", border="white", xlab="Mean Vedba (g)")
 hist(finalDf$meanVedba_Gs[finalDf$flapping_bin==0], breaks=h$breaks, prob=F, add=T, 
-     col=alpha("blue", 0.1), border=alpha("blue", 0.15))
+     col=alpha("darkblue", 0.1), border=alpha("darkblue", 0.15))
 hist(finalDf$meanVedba_Gs[finalDf$flapping_bin==1], breaks=h$breaks, prob=F, add=T, 
-     col=alpha("red", 0.1), border=alpha("red", 0.15))
+     col=alpha("firebrick", 0.1), border=alpha("firebrick", 0.15))
 legend(x=1.1, y=22000, c("Mean of Active Distribution", "Mean of Passive Distribution","Crossover point"), lty=1, lwd=3, cex=0.8, seg.len = 1,
-       col=c("red","blue","darkgrey"), bty="n")
+       col=c("firebrick","darkblue","darkgrey"), bty="n")
 
 par(new = TRUE) # Add new plot
-plot(sort(finalDf$meanVedba_Gs), (1 - sort(finalDf$flapping_prob)), col="blue", cex=0.3, 
+plot(sort(finalDf$meanVedba_Gs), (1 - sort(finalDf$flapping_prob)), col="darkblue", cex=0.3, 
      xlab="", ylab="", ylim=c(0,1), axes=F, type="l", lwd=2)
-lines(sort(finalDf$meanVedba_Gs), sort(finalDf$flapping_prob), col="red", cex=0.3, lwd=2)
+lines(sort(finalDf$meanVedba_Gs), sort(finalDf$flapping_prob), col="firebrick", cex=0.3, lwd=2)
 abline(v=mu1, lty=1, lwd=3, col="white")
-abline(v=mu1, lty=2, lwd=3, col="blue")
+abline(v=mu1, lty=2, lwd=3, col="darkblue")
 abline(v=mu2, lty=1, lwd=3, col="white")
-abline(v=mu2, lty=2, lwd=3, col="red")
+abline(v=mu2, lty=2, lwd=3, col="firebrick")
 abline(v=antimode, lty=1, lwd=3, col="white")
 abline(v=antimode, lty=2, lwd=3, col="darkgrey")
 axis(side = 4, at = pretty(c(0,1)))      # Add second axis
@@ -197,57 +184,3 @@ mtext("Probability", side = 4, line = 3)   # Add second axis label
 
 dev.off()
 
-
-# Plot one classified histogram per study
-
-finalDf <- readRDS("DataFinalSummary/allStudies_allTags_VedbaGs_March2024_flappingProbs.rds")
-
-group <- paste(finalDf$study.name, finalDf$individual.taxon.canonical.name, sep="_")
-studiesLS <- split(finalDf, group)
-
-lapply(studiesLS, function(df){
-  
-  studyId <- ifelse(unique(df$dataSource)=="Movebank", unique(df$study.id), unique(df$dataSource))
-  fileName <- paste0(studyId,"_",unique(df$individual.taxon.canonical.name),"_",unique(df$deviceType))
-  print(fileName)
-  
-  tiff(file=paste0("Plots/ACCsegmentation/finalSpecies_VeDBAhistograms/study_",fileName,"_VeDBAsegmentation_MixR.tiff"),
-       7.5,6, units="in", res=400)
-  par(mar = c(5, 4, 4, 4) + 0.3) # Additional space for second y-axis
-  h <- hist(df$meanVedba_Gs, breaks="FD", prob=F, main=fileName,
-            col="white", border="white", xlab="mean Vedba (g)")
-  hist(df$meanVedba_Gs[df$flapping_bin==1], breaks=h$breaks, prob=F, add=T, 
-       col=alpha("firebrick", 0.1), border=alpha("firebrick", 0.75))
-  hist(df$meanVedba_Gs[df$flapping_bin==0], breaks=h$breaks, prob=F, add=T, 
-       col=alpha("blue", 0.1), border=alpha("blue", 0.75))
-
-  par(new = TRUE) # Add new plot
-  plot(sort(finalDf$meanVedba_Gs), (1 - sort(finalDf$flapping_prob)), col="firebrick", cex=0.3, 
-       xlab="", ylab="", ylim=c(0,1), axes=F, type="l", lwd=2, xlim=range(df$meanVedba_Gs)) #important to plot it in the range of the species' dataset
-  lines(sort(finalDf$meanVedba_Gs), sort(finalDf$flapping_prob), col="blue", cex=0.3, lwd=2)
-  abline(v=mu1, lty=1, lwd=3, col="white")
-  abline(v=mu1, lty=2, lwd=3, col="blue")
-  abline(v=mu2, lty=1, lwd=3, col="white")
-  abline(v=mu2, lty=2, lwd=3, col="firebrick")
-  abline(v=antimode, lty=1, lwd=3, col="white")
-  abline(v=antimode, lty=2, lwd=3, col="darkgrey")
-  axis(side = 4, at = pretty(c(0,1)))      # Add second axis
-  mtext("Probability", side = 4, line = 3)   # Add second axis label
-  legend("topright", legend=c("Passive flight","Active flight"),
-         col=c(alpha("blue", 0.6), alpha("firebrick", 0.6)), pch=19, cex=0.8)
-  dev.off()
-})
-
-#________
-## Small check with the golden eagles. 
-## The histogram shows a firs peak at VeDBA around 0. But still the speeds corresponding to those segments are higher than the set threshold. So we keep them.
-names(studiesLS)
-df <- studiesLS[[36]]
-unique(df$study.id)
-
-summary(df$meanVedba_Gs)
-hist(df$meanVedba_Gs[df$meanVedba_Gs < 0.1])
-table(df$meanVedba_Gs < 0.04)
-summary(df$groundSpeed_ms[df$meanVedba_Gs < 0.04])
-summary(df$groundSpeed_ms[df$meanVedba_Gs < 0.01])
-df %>% group_by(meanVedba_Gs < 0.01) %>% summarise(medSpeed=median(groundSpeed_ms))

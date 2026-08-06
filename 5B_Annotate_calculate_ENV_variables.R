@@ -3,42 +3,29 @@
 # Annotate tracking data with era5 data ####
 #___________________________________________
 
-setwd("...") # where env data are stored
-cot_path <- "..." # local folder with data and scripts
-source(paste0(cot_path,"Scripts/COT_publ/ERA5_functions_download_annotate_calculateUpliftProxies_2024Aug.R")) # load own function library
+## Note that the dataset already annotated with all environmental variables
+## is made available in the Edmond repository (file "BiologgingData/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds")
 
-dir.create(paste0(cot_path,"DataFinalSummary/AnnotatedData"))
+# store the path where you downloaded the scripts and import functions
+codePath <- "..."
+source(paste0(codePath, "COT_publ/ERA5_functions_download_annotate_calculateUpliftProxies_2024Aug.R")) #For direction360
+
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts,
+# which following script 5A, should contain the folder ERA5downloads.
+setwd("...")
+
+# Create a directory to store the annotated data
+dir.create("DataFinalSummary/AnnotatedData")
 
 # Load the file to annotate
-finalDf <- readRDS(paste0(cot_path,"DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs.rds"))
+finalDf <- readRDS("DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs.rds")
 length(unique(finalDf$mergingCol)) == nrow(finalDf) # mergingCol is the unique row ID that we will use for the extraction
 length(unique(finalDf$event.id)) == nrow(finalDf)
 finalDf$event.id <- NULL
 
-#_____________________
-# Annotate topography
-
-topoMerge <- rast(paste0(cot_path,"DEM/world_DEM_slope_aspect_deFerranti_1km.tif")) 
-dem <- extract(topoMerge[["dem"]], finalDf[,c("location.long","location.lat")], method="bilinear")
-aspSlope <- extract(topoMerge[[c("slope","aspect")]], finalDf[,c("location.long","location.lat")], method="simple")
-nrow(finalDf)==nrow(aspSlope)
-finalDf <- cbind(finalDf, dem, aspSlope)
-
-summary(finalDf$dem)
-summary(finalDf$aspect)
-
-saveRDS(finalDf, paste0(cot_path,"DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds"))
-
-# Check which species (and where) have NAs in the topography (it is animals flying over water)
-table(finalDf$species[is.na(finalDf$slope)])
-plot(topoMerge[[1]])
-points(finalDf$location.long[is.na(finalDf$slope)], finalDf$location.lat[is.na(finalDf$slope)], col="red", pch=19, cex=0.5)
-plot(topoMerge[[1]], xlim=c(0,100), ylim=c(50,90))
-points(finalDf$location.long[is.na(finalDf$slope)], finalDf$location.lat[is.na(finalDf$slope)], col="red", pch=19, cex=0.5)
-
-
-#__________________________
-# Define height to extract
+#________________________________________________
+# Define height/pressure level to extract ERA5 at
 
 # Define height to download
 # Let's extract the median height above ellipsoid/sea level just to decide on a pressure level to download wind data from:
@@ -50,7 +37,7 @@ finalDf$annotationHeightEll_m <- 1000
 
 # Set the directory path for the ERA5 files
 # List ERA5 files in one of the directory, (files dates are the same for single levels and pressure levels)
-era5_files <- list.files("ERA5downloads_singleLev", pattern = "^download_ERA5_.*singleLev.nc$", full.names = TRUE)
+era5_files <- list.files("ERA5downloads/ERA5downloads_singleLev", pattern = "^download_ERA5_.*singleLev.nc$", full.names = TRUE)
 
 #__________________________________________________________________
 # Extract track data for annotation, for each ERA5 file in parallel
@@ -80,9 +67,9 @@ extracted_data_list <- extracted_data_list[sapply(extracted_data_list, function(
 sum(sapply(lapply(extracted_single, "[[", 4), nrow)) == nrow(finalDf)
 
 # We only need to do the extraction once, and just replace the file name, as the dates for singleLev and pressLev are exactly the same for both list of files
-s <- list.files("ERA5downloads_singleLev", pattern = "^download_ERA5_.*singleLev.nc$", full.names = TRUE)
-p <- list.files("ERA5downloads_pressLev", pattern = "^download_ERA5_.*pressLev.nc$", full.names = TRUE)
-w <- list.files("ERA5downloads_upliftProxies", pattern = "^download_ERA5_.*star.nc$", full.names = TRUE)
+s <- list.files("ERA5downloads/ERA5downloads_singleLev", pattern = "^download_ERA5_.*singleLev.nc$", full.names = TRUE)
+p <- list.files("ERA5downloads/ERA5downloads_pressLev", pattern = "^download_ERA5_.*pressLev.nc$", full.names = TRUE)
+w <- list.files("ERA5downloads/ERA5downloads_upliftProxies", pattern = "^download_ERA5_.*star.nc$", full.names = TRUE)
 
 sD <- sapply(strsplit(s, "_"), "[", 4)
 pD <- sapply(strsplit(p, "_"), "[", 4)
@@ -106,13 +93,13 @@ extracted_press <- lapply(extracted_data_list, function(x){
   return(x)
 })
 
-save(extracted_single, extracted_uplifts, extracted_press, file = paste0(cot_path,"DataFinalSummary/AnnotatedData/list_extractedFiles_to_annotate.rdata"))
+save(extracted_single, extracted_uplifts, extracted_press, file = "DataFinalSummary/AnnotatedData/list_extractedFiles_to_annotate.rdata")
 
 
 #______________________________________
 # Annotate ECMWF variables in parallel
 
-load(paste0(cot_path,"DataFinalSummary/AnnotatedData/list_extractedFiles_to_annotate.rdata")) #extracted_single, extracted_uplifts, extracted_press
+load("DataFinalSummary/AnnotatedData/list_extractedFiles_to_annotate.rdata") #extracted_single, extracted_uplifts, extracted_press
 
 registerDoMC(cores = parallel::detectCores() - 2) # Register a parallel back-end
 
@@ -128,7 +115,7 @@ end_time <- Sys.time()
 print(paste("Time taken for annotating era5 data:", round(difftime(end_time, start_time, units = "mins"), 2), "minutes"))
 summary(era5_data_single)
 head(era5_data_single)
-saveRDS(era5_data_single, file = paste0(cot_path,"DataFinalSummary/AnnotatedData/annotatedDf_era5_singleLev.rds"))
+saveRDS(era5_data_single, file = "DataFinalSummary/AnnotatedData/annotatedDf_era5_singleLev.rds")
 
 ## Uplift proxy:
 start_time <- Sys.time()
@@ -139,7 +126,7 @@ end_time <- Sys.time()
 print(paste("Time taken for annotating era5 data:", round(difftime(end_time, start_time, units = "mins"), 2), "minutes"))
 summary(era5_data_uplifts)
 head(era5_data_uplifts)
-saveRDS(era5_data_uplifts, file = paste0(cot_path,"DataFinalSummary/AnnotatedData/annotatedDf_era5_Wstar.rds")) 
+saveRDS(era5_data_uplifts, file = "DataFinalSummary/AnnotatedData/annotatedDf_era5_Wstar.rds")
 
 ## Pressure levels:
 start_time <- Sys.time()
@@ -150,7 +137,7 @@ end_time <- Sys.time()
 print(paste("Time taken for annotating era5 data:", round(difftime(end_time, start_time, units = "mins"), 2), "minutes"))
 summary(era5_data_press)
 head(era5_data_press)
-saveRDS(era5_data_press, file = paste0(cot_path,"DataFinalSummary/AnnotatedData/annotatedDf_era5_pressLev.rds"))
+saveRDS(era5_data_press, file = "DataFinalSummary/AnnotatedData/annotatedDf_era5_pressLev.rds")
 
 #______________________________________
 # Merge track info with era5 data ####
@@ -202,5 +189,6 @@ boxplot(Orographic_uplift_potential~flapping_bin, data=finalDf_era5)
 boxplot(`w_star_Thermal_uplift_potential_(W*)`~flapping_bin, data=finalDf_era5)
 
 # Save final dataset for the models in next steps
-saveRDS(finalDf_era5, "DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds")
+# This dataset is made available in Edmond repository
+saveRDS(finalDf_era5, "BiologgingData/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds")
 

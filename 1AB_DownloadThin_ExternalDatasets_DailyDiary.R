@@ -14,9 +14,16 @@ library(amt)
 library(lubridate)
 library(geosphere)
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
 setwd("...")
 
-source("Scripts/COT_publ/COT_functions.R") #For direction360
+# Create folder to store processed data, study by study
+dir.create("DataProcessed")
+
+# store the path where you downloaded the scripts
+codePath <- "..."
+
+source(paste0(codePath, "COT_publ/COT_functions.R")) #For direction360
 
 
 #___________________________________
@@ -26,7 +33,7 @@ source("Scripts/COT_publ/COT_functions.R") #For direction360
 options(digits=6)
 options(digits.secs=4)
 
-df <- read.csv("DataAvailable/GpsAcc_ExternalDatasets/EmilysData/Condors/allcondors_GPS_DD_weather_dir_marked.csv", as.is=T)
+df <- read.csv("DataAvailable/GpsAcc_ExternalDatasets/Condors/allcondors_GPS_DD_weather_dir_marked.csv", as.is=T)
 
 length(unique(df$condor))
 
@@ -92,7 +99,7 @@ gpsAcc_ls <- lapply(gpsAcc_ls, function(gpsAcc){
 gpsAcc_ls <- gpsAcc_ls[which(!sapply(gpsAcc_ls, is.null))]
 df_geom <- as.data.frame(rbindlist(gpsAcc_ls, fill=T))
 # Import body mass infos and merge body mass info to the dataframe
-speciesInfo <- read.csv("/home/mscacco/ownCloud/Martina/ProgettiVari/COT/DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy.csv", as.is=T)
+speciesInfo <- read.csv("./DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy.csv", as.is=T)
 df_geom$individual.taxon.canonical.name <- "Vultur gryphus"
 df_geom$species_english <- speciesInfo$species_english[speciesInfo$matchingSpeciesName == unique(df_geom$individual.taxon.canonical.name)]
 df_geom$BodyMass_value <- speciesInfo$BodyMass_value[speciesInfo$matchingSpeciesName == unique(df_geom$individual.taxon.canonical.name)]
@@ -102,7 +109,9 @@ df_geom$study.name <- "Andean Condor Vultur gryphus Bariloche, Argentina, 2013-2
 df_geom$event.id <- 1:nrow(df_geom)
 df_geom$deviceType <- "DailyDiary"
 # Add infos about ACC sampling
-# In the condor data, the vedba was averaged across 10 seconds (5 sec before and after each GPS point) at a frequency of 40 Hz
+# In the condor data, ACC is triaxial and the vedba was averaged across 10 seconds (5 sec before and after each GPS point) at a frequency of 40 Hz
+df_geom$acc_axes <- "XYZ"
+df_geom$acc_Naxes <- 3
 df_geom$acc_sampl_freq_per_axis <- 40
 df_geom$n_samples_per_axis <- 400
 df_geom$acc_burst_duration_s <- 10
@@ -122,7 +131,7 @@ save(df_geom, file="DataProcessed/studyId_EmilysDataHannah_Vultur-gryphus_DD_dfG
 # Import
 options(digits.secs=4)
 
-df <- read.table("DataAvailable/GpsAcc_ExternalDatasets/EmilysData/TropicBirds/TropicBirds_Subset_GPS_FlightStyle_Coord2+VeDBA.txt", header=T, row.names = NULL, na.strings = c("NA",""), as.is=T)
+df <- read.table("DataAvailable/GpsAcc_ExternalDatasets/TropicBirds/TropicBirds_Subset_GPS_FlightStyle_Coord2+VeDBA.txt", header=T, row.names = NULL, na.strings = c("NA",""), as.is=T)
 df$timestamp <- paste(df$row.names, df$timestamp, sep=" ")
 df$row.names <- NULL
 df$timestamp <- as.POSIXct(df$timestamp, format="%Y-%m-%d %H:%M:%OS", tz="UTC")
@@ -148,7 +157,7 @@ lapply(df_ls, function(df){
 
 # Plot the tracks
 cols <- rainbow(length(df_ls))
-png("DataAvailable/GpsAcc_ExternalDatasets/EmilysData/TropicBirds/rawTraj_allBirds.png", width=8,height=8,units="in",res=300)
+png("DataAvailable/GpsAcc_ExternalDatasets/TropicBirds/rawTraj_allBirds.png", width=8,height=8,units="in",res=300)
 plot(df$location.long, df$location.lat, type="n")
 lapply(1:length(df_ls), function(i) lines(df_ls[[i]]$location.long, df_ls[[i]]$location.lat, col=cols[i]))
 dev.off()
@@ -182,12 +191,13 @@ gpsAcc_ls <- llply(gpsAcc_ls, function(gpsAcc){
   m$individual.local.identifier <- m@idData$BirdID
   m$track_flight_id <- m@idData$TripID
 
+
   return(as.data.frame(m))
 }, .parallel=T)
 # Exclude empty elements from the list
 gpsAcc_ls <- gpsAcc_ls[which(!sapply(gpsAcc_ls, is.null))]
 # Import body mass infos
-speciesInfo <- read.csv("/home/mscacco/ownCloud/Martina/ProgettiVari/COT/DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy.csv", as.is=T)
+speciesInfo <- read.csv("DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy.csv", as.is=T)
 # Bind, add body mass value, change some column names to match other datasets and save
 df_geom <- do.call(rbind, gpsAcc_ls)
 df_geom$individual.taxon.canonical.name <- "Phaethon rubricauda"
@@ -198,7 +208,9 @@ names(df_geom)[names(df_geom) == "VeDBA"] <- "meanVedba"
 df_geom$study.name <- "Red-tailed tropicbirds (Phaethon rubricauda) Round Island"
 df_geom$event.id <- 1:nrow(df_geom)
 df_geom$deviceType <- "DailyDiary"
-# In the tropicbird data, the vedba was averaged across 1 minute (30 sec before and after each GPS point) at a frequency of 40 Hz
+# In the tropicbird data, ACC data are triaxial and the vedba was averaged across 1 minute (30 sec before and after each GPS point) at a frequency of 40 Hz
+df_geom$acc_axes <- "XYZ"
+df_geom$acc_Naxes <- 3
 df_geom$acc_sampl_freq_per_axis <- 40
 df_geom$n_samples_per_axis <- 2400
 df_geom$acc_burst_duration_s <- 60
@@ -216,7 +228,7 @@ library(readr)
 options(digits=6)
 options(digits.secs=4)
 
-df <- read_csv("DataAvailable/GpsAcc_ExternalDatasets/StefanSchoombieData/ayna_all_out.zip")
+df <- read_csv("DataAvailable/GpsAcc_ExternalDatasets/YNAlbatross/ayna_all_out.zip")
 
 length(unique(df$id))
 

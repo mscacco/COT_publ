@@ -4,8 +4,8 @@
 #_____________________________________________________
 
 # The data necessary to run this script are deposited on Edmond (see readme file for details)
-# "finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv" and
-# "MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre"
+# "ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv" and
+# "ModelData/MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre"
 
 library(phylolm)
 library(geiger)
@@ -20,9 +20,11 @@ library(l1ou)
 library(dplyr)
 library(scales)
 
-# folder where the data files from the repository were downloaded
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which shuld also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
 
+dir.create("Plots/finalPlots")
 
 #__________________
 # Define functions
@@ -60,16 +62,16 @@ is_outlier <- function(x, threshold = 1.5) {
 # Prune tree to species in the dataset (to do once)
 
 # # Import model dataset with COT calculations
-# allSegmDfs <- read.csv("finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv")
+# allSegmDfs <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv")
 # 
 # # Create list of bird species (exclude bats) to download the corresponding trees
 # writeLines(unique(allSegmDfs$species_phy), "Phylogeny/Trees_species_2025/speciesList_forPhyloTree_2025.txt")
 # 
 # # We use this list to download a phylogeny subset of 1000 trees from birdtree.org
-# # We then summarise the 1000 trees in one majority-rule consensus (MRC) tree using the phyton library DendroPy version 5.0.1 using the function SumTrees (sumtrees --rooted --ultrametric --ultrametricity-precision 10000000 path/to/nex/file)
+# # We then summarise the 1000 trees in one majority-rule consensus (MRC) tree using the python library DendroPy version 5.0.1 using the function SumTrees (sumtrees --rooted --ultrametric --ultrametricity-precision 10000000 path/to/nex/file)
 # 
 # # Import the resulting MRC tree
-# phyloSum_Er <- read.nexus("MRCtree_DendroPy_from1000_Ericson_2025.tre")
+# phyloSum_Er <- read.nexus("Phylogeny/Trees_species_2025/MRCtree_DendroPy_from1000_Ericson_2025.tre")
 # 
 # is.ultrametric(phyloSum_Er)  # Returns TRUE if the tree is ultrametric
 # 
@@ -84,14 +86,14 @@ is_outlier <- function(x, threshold = 1.5) {
 # pruned_tree <- keep.tip(phyloSum_Er, unique(data$species_phy)) # prune tree to bird species in dataset
 # 
 # # Save pruned tree for next step
-# write.nexus(pruned_tree, file = "MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
+# write.nexus(pruned_tree, file = "ModelData/MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
 
 
 #_________________
 # Define outliers
 
 # Import model dataset with COT calculations
-allSegmDfs <- read.csv("finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv")
+allSegmDfs <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv")
 
 # individuals' means
 perInd <- allSegmDfs %>% group_by(individualID, species_phy) %>%
@@ -133,7 +135,7 @@ nrow(allSegmDfs_out) # 3993 observations belong to outlier individuals
 allSegmDfs_noOutliers <- allSegmDfs[!allSegmDfs$individualID %in% outliersID,]
 
 # save dataset without outliers
-saveRDS(allSegmDfs_noOutliers, "finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.rds")
+write.csv(allSegmDfs_noOutliers, file="ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv", row.names = F)
 
 
 #__________________________________________________
@@ -141,10 +143,10 @@ saveRDS(allSegmDfs_noOutliers, "finalSummaryDataset_perSegment_fromFix+COTvariab
 # (After removing outliers, recalculate averages for the model)
 
 # Import pruned tree
-tree <- read.nexus("MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
+tree <- read.nexus("ModelData/MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
 
 # Import data without outlier individuals
-allSegmDfs_noOutliers <- readRDS("finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.rds")
+allSegmDfs_noOutliers <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv")
   
 # Variables of interest
 data <- allSegmDfs_noOutliers
@@ -317,13 +319,13 @@ R2(mod = Model_ML, mod.r = Model, phy = tree)
 summary(Model_ML) # slope and intercept of the two regression lines
 
 # Save model with one and two fitted regression lines, for comparison
-save(Model_ML, Model, data, tree, file="gradeShiftModel_Feb2025.rdata")
+save(Model_ML, Model, data, tree, file="ModelData/gradeShiftModel_Feb2025.rdata")
 
 #______________________
 # PLOT of grade shifts
 
 # load model and tree 
-load("gradeShiftModel_Feb2025.rdata") #objects Model_ML, Model, data, tree
+load("ModelData/gradeShiftModel_Feb2025.rdata") #objects Model_ML, Model, data, tree
 
 edge_col<-rep("gold2",length(tree$edge.length))
 edge_col[getEdges(tree,findMRCA(tree,Storks))]<-"dodgerblue3"
@@ -363,7 +365,7 @@ anyNA(allSegmDfs_soarFlap$soarFlap_pgls)
 table(summarise(group_by(allSegmDfs_soarFlap, species_phy), unique(soarFlap_pgls))[,2])
 
 # re-save the original dataset with the added soar/flap categories
-saveRDS(allSegmDfs_soarFlap, file="finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.rds")
+write.csv(allSegmDfs_soarFlap, file="ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv", row.names = F)
 
 #____________
 # Table S4

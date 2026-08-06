@@ -24,9 +24,9 @@ library(rr2) #R2 for phylo models
 setwd("...")
 
 # Import model dataset with COT calculations and new soar/flap categories
-allSegmDfs <- readRDS("finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.rds")
+allSegmDfs <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv")
 # Import the majority-rule consensus (MRC) of the 1000 Ericson trees
-tree <- read.nexus("MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
+tree <- read.nexus("ModelData/MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
 
 
 #______________________________________________
@@ -122,8 +122,8 @@ slopeSoar <- slopeFlap + summ[["coefficients"]]["X1:X2soar",1] # effect of body 
 modelCoefficients <- cbind(intFlap,intSoar,slopeFlap,slopeSoar)
 
 # Save models
-save(model_w, modelCoefficients_w, file="phyloModels_FPW-bodymass_Feb2025.rdata")
-save(model, modelCoefficients, file="phyloModels_COT-bodymass_Feb2025.rdata")
+save(model_w, modelCoefficients_w, file="ModelData/phyloModels_FPW-bodymass_Feb2025.rdata")
+save(model, modelCoefficients, file="ModelData/phyloModels_COT-bodymass_Feb2025.rdata")
 
 #_______
 # Plots 
@@ -189,7 +189,7 @@ boxplot(COT_residuals~soarFlap_pgls, data=allSegmDfs_mode, col=alpha(c("gold2","
 dev.off()
 
 # Re-save the dataset with the additional columns Yfitted and COTresiduals
-saveRDS(allSegmDfs_mode, file="finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.rds")
+write.csv(allSegmDfs_mode, file="ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv", row.names = F)
 
 #____________________________________
 ## Density plots and residual models
@@ -484,7 +484,7 @@ summary(modRes_lm_soar)
 r.squaredGLMM(modRes_lm_soar)
 hist(residuals(modRes_lm_soar))
 
-save(modRes_lm_flap, modRes_lm_soar, file="models_COTresiduals-energyLandscape_Feb2025.rdata")
+save(modRes_lm_flap, modRes_lm_soar, file="ModelData/models_COTresiduals-energyLandscape_Feb2025.rdata")
 
 
 # Plot the effects
@@ -566,7 +566,6 @@ p2 <- ggplot(grid_soar, aes(x = avg_windSupp_1000m, y = avg_thermUplift, fill = 
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-#pdf("Plots/finalPlots/soarersFlappers_residualsVSenergyLandscape_Feb2025_greenMag.pdf", width=10, height=5)
 png("Plots/finalPlots/soarersFlappers_residualsVSenergyLandscape_Feb2025_greenMag.png", width=10, height=5, units = "in", res=400)
 grid.arrange(p1, p2, ncol = 2)
 dev.off()

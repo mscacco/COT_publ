@@ -6,9 +6,6 @@
 # ORNITELA ####
 #_______________
 
-
-setwd("...")
-
 library(data.table)
 library(ggplot2)
 library(dplyr)
@@ -23,10 +20,18 @@ library(doParallel)
 #detectCores()
 doParallel::registerDoParallel(5)
 
-
 options(digits.secs=3)
 
-source("Scripts/COT_publ/COT_functions.R")
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+setwd("...")
+
+# Create folder to store processed data, study by study
+dir.create("DataProcessed")
+
+# store the path where you downloaded the scripts
+codePath <- "..."
+
+source(paste0(codePath, "COT_publ/COT_functions.R")) #For direction360
 
 #_______________
 # ORNITELA ####
@@ -39,7 +44,7 @@ source("Scripts/COT_publ/COT_functions.R")
 #_____
 # Work with GPS data
 
-fls <- list.files("DataAvailable/GpsAcc_ExternalDatasets/DavidWolfson_TrumpeterSwan", pattern = "csv", full.names = T)
+fls <- list.files(".../DavidWolfson_TrumpeterSwan", pattern = "csv", full.names = T)
 
 allGPS <- as.data.frame(rbindlist(lapply(fls, function(f){
   df <- read.csv(f)
@@ -121,6 +126,8 @@ allACC_perBursts <- as.data.frame(rbindlist(lapply(fls, function(f){
               cumVedba_Gs=sum(vedba, na.rm=T))
 
   # add ACC burst sampling info found out above
+  accPerBurst$acc_axes <- "XYZ"
+  accPerBurst$acc_Naxes <- 3
   accPerBurst$acc_burst_duration_s <- 2.5
   accPerBurst$acc_sampl_freq_per_axis <- 12
   accPerBurst$n_samples_per_axis <- 30
@@ -315,6 +322,8 @@ allACC_perBursts <- as.data.frame(rbindlist(lapply(fls, function(f){
   accPerBurst$acc_burst_duration_s <- as.numeric(difftime(accPerBurst$UTC_datetime_end, accPerBurst$UTC_datetime_start, units="secs"))
   accPerBurst$acc_burst_duration_s[accPerBurst$acc_burst_duration_s==21] <- 20
   accPerBurst$acc_sampl_freq_per_axis <- round(accPerBurst$n_samples_per_axis/accPerBurst$acc_burst_duration_s)
+  accPerBurst$acc_axes <- "XYZ"
+  accPerBurst$acc_Naxes <- 3
   
   return(accPerBurst)
 })))

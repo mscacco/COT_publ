@@ -10,13 +10,20 @@
 library(data.table)
 library(dplyr)
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
 setwd("...")
+
+# store the path where you downloaded the scripts
+codePath <- "..."
+
+# Create a folder for plots (do not change name to ensure compatibility through scripts)
+dir.create("Plots")
 
 #_________________________
 ## CALCULATE MBR and THEORETICAL COSTS based on range of body masses ###
 
 ## Import the species information including body mass and WFF_group
-speciesInfos <- read.csv("DataAvailable/RADARdata_YuvalNir/midjuly_midseptember_Desert_Med_Species-Final.csv")
+speciesInfos <- read.csv("./RadarData/SpeciesList_midjuly_midseptember_Desert_Med_Species-Final.csv")
 speciesInfos$matchingSpeciesName <- paste(speciesInfos$Genus, speciesInfos$species, sep=" ")
 length(unique(speciesInfos$matchingSpeciesName))
 unique(df$July)
@@ -29,7 +36,7 @@ table(speciesInfos$Habitat) # All species are from all habitats (both Desert and
 
 ## Associate body mass from Dunning 2007 (the same source as the rest of the data)
 # Even though the radat dataset already contains body mass info, take the body mass information from the same source used for the gps data
-# Import body mass infos
+# Import body mass infos created in previous step
 BMinfo <- read.csv("DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy_gps+radar.csv", as.is=T)
 # Bind, add body mass value, change some column names to match other datasets and save
 table(speciesInfos$matchingSpeciesName %in% BMinfo$matchingSpeciesName)
@@ -73,7 +80,7 @@ saveRDS(Mass_WFFgroup_month, "DataFinalSummary/RADARdata_summaryBodyMassPerWFF-m
 Mass_WFFgroup_month <- readRDS("DataFinalSummary/RADARdata_summaryBodyMassPerWFF-month.rds")
 
 # Import Yuval's radar data with infos per echo
-radarDf <- read.csv("DataAvailable/RADARdata_YuvalNir/Extended_Radar_data_midjuly_midseptember_no_bats.csv", na.strings = "NULL")
+radarDf <- read.csv("RadarData/Extended_Radar_data_midjuly_midseptember_no_bats.csv", na.strings = "NULL")
 radarDf$month <- as.numeric(substr(radarDf$Time_UTC,4,5))
 table(radarDf$Habitat) #all species in the species list are from all habitat, so no need to take this info into account
 table(radarDf$Location)
@@ -129,7 +136,7 @@ radarDf$theor_MR_pass_W_mean <- (2 * radarDf$BMR_W_mean)
 # 2. MR flap and cost of flapping (need to run script 0C first)
 
 # MR for flapping flight (predicted based on lm model on Kyle's data)
-load("DataFinalSummary/flappingModel_KylesData.RData") #import lm object modBirds
+load("DataFinalSummary/flappingModel_GuiguenoData.RData") #import lm object modBirds
 log_bodyMass_Kg <- log(radarDf$meanMass/1000)
 radarDf$theor_MR_flap_W_mean <- exp(predict(modBirds, newdata=data.frame(log_bodyMass_Kg)))
 
@@ -175,7 +182,8 @@ boxplot(obs_tot_COT_J_KgM_constantFlap~WFF_group, data=radarDf)
 ## CALCULATE WIND SUPPORT ##
 #_____________________________
 
-source("Scripts/COT_publ/ERA5_functions_download_annotate_calculateUpliftProxies_2024Aug.R") # for wind calculation functions 
+source(paste0(codePath, 
+              "COT_publ/ERA5_functions_download_annotate_calculateUpliftProxies_2024Aug.R")) # for wind calculation functions 
 
 radarDf$ERA5_u_component_of_wind_ms <- as.numeric(radarDf$ERA5_u_component_of_wind_ms)
 radarDf$ERA5_v_component_of_wind_ms <- as.numeric(radarDf$ERA5_v_component_of_wind_ms)
@@ -188,17 +196,15 @@ radarDf$crossWind <- crossWind(u=radarDf$ERA5_u_component_of_wind_ms, v=radarDf$
 radarDf$airspeed <- airspeed(Vg=radarDf$Speed.ms, Ws=radarDf$windSupport, Cw=radarDf$crossWind)
 
 
-saveRDS(radarDf, file="DataFinalSummary/RADARdata_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.rds")
-write.csv(radarDf, file="DataFinalSummary/RADARdata_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.csv", row.names = F)
-
-# This csv is deposited on the Edmond repository (see readme for details)
+write.csv(radarDf, file="ModelData/RADAR_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.csv", row.names = F)
+# This csv is deposited on the Edmond repository in the ModelData folder (see readme for details)
 
 #___________
 ## PLOTTING ##
 #___________
 
 # Import the radar data
-radarDf <- readRDS("DataFinalSummary/RADARdata_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.rds")
+radarDf <- readRDS("ModelData/RADAR_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.rds")
 
 radarDf$log_bodyMass_Kg <- log(radarDf$meanMass_kg)
 radarDf$log_propPulse <- log(radarDf$propPulse)
@@ -230,7 +236,6 @@ range(radar_meanPerSp$bodyMass_kg)
 radMod_pulse <- lm(log_probFlap~log_bodyMass_Kg, radar_meanPerSp)
 summary(radMod_pulse)
 
-pdf("Plots/finalPlots/radarData_propPulse_Feb2025.pdf", 5,5)
 plot(log_probFlap~log_bodyMass_Kg, radar_meanPerSp, col="white", pch=20, 
      ylim=c(-0.7,0), xlim=c(-4.4,-3.85),
      ylab="log(avg Prop Pulse/Pause)", xlab="log(Body mass in Kg)",cex.lab=1.3, cex.axis=1.3)
@@ -240,7 +245,6 @@ points(log_probFlap~log_bodyMass_Kg, radar_meanPerSp, pch=17, cex=1.8, col="grey
 points(log_probFlap~log_bodyMass_Kg, radar_meanPerSp, pch=24, cex=1.8, col="grey10")
 points(rep(log(1),nrow(radar_meanPerSp))~log_bodyMass_Kg, radar_meanPerSp, pch=8, lwd=1.5, cex=1.6, col="grey10")
 text(log_probFlap~log_bodyMass_Kg, radar_meanPerSp, labels=radar_meanPerSp$WFFmonth_species_abb, pos=4, cex=1, offset=0.5, srt=30, font=3)
-dev.off()
 
 
 #_________________________________________
@@ -281,7 +285,6 @@ abline(modelCoefficients[,"intPause"], modelCoefficients[,"slopePause"], lty=1, 
 # Plot COT ~ body mass
 load("DataFinalSummary/thereticalCOTs_Nielsen-Alexander.RData") #objects theoreticalCOTschmidt theoreticalCOTalex
 
-pdf("Plots/finalPlots/soarersFlappers_COTmodel_Feb2025_theorLines_onlyRADAR1panel_regLines.pdf",8,5)
 par(mfrow=c(1,1))
 plot(radar_meanPerSp$log_bodyMass_Kg, radar_meanPerSp$log_COT_flap, pch=19, 
      xlim=c(-4.4,-3.85), ylim=c(1,4), col="white",
@@ -301,7 +304,6 @@ points(radar_meanPerSp$log_bodyMass_Kg, radar_meanPerSp$log_COT_pause, pch=17, c
 points(radar_meanPerSp$log_bodyMass_Kg, radar_meanPerSp$log_COT_pause, pch=24, cex=1.8, col="grey10")
 text(log_COT_flap~log_bodyMass_Kg, radar_meanPerSp, labels=radar_meanPerSp$WFFmonth_species_abb, pos=4, cex=.7, offset=0.5, srt=30, font=3)
 text(log_COT_flap~log_bodyMass_Kg, radar_meanPerSp, labels=radar_meanPerSp$WFFmonth_species_abb, pos=4, cex=.7, offset=0.5, srt=30, font=3)
-dev.off()
 
 #_________________________________________
 # Model residuals ~ energy landscape for radar data
@@ -361,7 +363,7 @@ ggplot(grid, aes(x = windSupport, y = COT_residuals, group=method, color = metho
   theme(panel.grid.minor.x = element_blank(), panel.grid.minor.y = element_blank(),
         panel.grid.major.x = element_line(linewidth = 0.15), panel.grid.major.y = element_line(linewidth = 0.15)) +
   theme(text = element_text(size = 14))
-ggsave("Plots/finalPlots/radarData_residualsWindSupport.pdf", width=6,height=6)
+ggsave("Plots/radarData_residualsWindSupport.pdf", width=6,height=6)
 
 # Plot distribution of residuals
 species_order <- echoDf %>%
@@ -384,10 +386,9 @@ ggplot(echoDf, aes(x = residuals, y = WFFmonth_species, fill = ..x.., group = WF
   theme_minimal() +
   theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray70")
-ggsave("Plots/finalPlots/radar_residualsDensities_Feb2025_greenMag.pdf", width=7, height=6)
+ggsave("Plots/radar_residualsDensities_Feb2025_greenMag.pdf", width=7, height=6)
 
-#ggplot(echoDf, aes(x = residuals, fill = method, color = method, group=method)) +
-  #geom_density(alpha = 0.5, adjust = 1.25) + # For overlapping densities
+
 ggplot(echoDf, aes(x = residuals, y = method, color = method, fill=method)) +
   geom_density_ridges(alpha = 0.5, scale = 1.1, rel_min_height = 0.01) + # For stacked densities
   xlim(-3, 3) +
@@ -398,6 +399,6 @@ ggplot(echoDf, aes(x = residuals, y = method, color = method, fill=method)) +
         panel.grid.minor.x = element_blank()) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
   labs(y = "Density", x = "Residuals")
-ggsave("Plots/finalPlots/radar_residualsDensities.pdf", width=6, height=6)
+ggsave("Plots/radar_residualsDensities.pdf", width=6, height=6)
 
 

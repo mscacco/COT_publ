@@ -3,11 +3,21 @@
 # Classification of commuting flights using GPS ####
 #___________________________________________________
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
+setwd("...")
+
+# Create folder to store plots
+dir.create("Plots/SPEEDhistograms")
+
+# store the path where you downloaded the scripts
+codePath <- "..."
+
+source(paste0(codePath, "COT_publ/COT_functions.R")) #For direction360
+
 #____________________________________________________________
 # Explore possible segmentation for commuting segments ####
 
-setwd("...")
-dir.create("Plots/SPEEDhistograms")
 
 fls <- list.files("DataProcessed", "dfGpsAcc_geom_10min.RData", full.names=T)
 

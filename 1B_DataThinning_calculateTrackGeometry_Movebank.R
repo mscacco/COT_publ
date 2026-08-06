@@ -14,14 +14,23 @@ library(doParallel)
 library(lubridate)
 options(digits=6)
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
-source("Scripts/COT_publ/COT_functions.R") # load own function library
+
+# Create folder to store processed data, study by study
+dir.create("DataProcessed")
+
+# store the path where you downloaded the scripts
+codePath <- "..."
+
+source(paste0(codePath, "COT_publ/COT_functions.R")) # load own function library
+
 
 flsEobs <- list.files("DataDownloaded", "gpsAcc_transf", full.names=T)
 flsOthers <- grep("eobs", list.files("DataDownloaded", "gpsAcc", full.names=T), invert = T, value=T)
 fls <- c(flsEobs, flsOthers)
 
-dir.create("DataProcessed")
 
 flsDone <- list.files("DataProcessed", pattern="dfGpsAcc_geom_10min", full.names = T) # files that already went through this step
 if(length(flsDone)>0){

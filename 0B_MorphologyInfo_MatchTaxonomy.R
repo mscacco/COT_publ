@@ -1,14 +1,101 @@
 
 #__________________________
-## Species' body mass ####
+## Species' morphology ####
 #__________________________
 
+# In order to run this script, you will need:
+# - the wind morphology dataset compiled by the authors, and available in the Edmond repository "InputData/wingMorphology_perSpecies_Feb2025.csv"
+# - wing measurements (lift generation area and wing area) available from Malo & Mata, Ecology and Evolution 2021
+# - the Avonet dataset, available from "AVONET: morphological, ecological and geographical data for all birds". Ecol. Lett. 25, 581–597 (2022)
+# - the body mass dataset, available from "EltonTraits 1.0: Species-level foraging attributes of the world's birds and mammals". Ecology 95:2027 (2014) 
+
+# Set as wd the path where you stored the content downloaded form the Edmond repository
 setwd("...")
 
-#____________________________________________________
-## Format dataset with body masses per species ####
+#____________________________________________
+## 1. Compile wing morphology per species ####
 
-# from Hamish Wilman, Jonathan Belmaker, Jennifer Simpson, Carolina de la Rosa, Marcelo M. Rivadeneira, Walter Jetz. 2014. EltonTraits 1.0: Species-level foraging attributes of the world's birds and mammals. Ecology 95:2027. http://dx.doi.org/10.1890/13-1917.1
+# ! Note that the file "InputData/wingMorphology_perSpecies_Feb2025.csv" contains both the input and the output of this section
+# as the columns output of this script get simply added to the same file
+
+# Store the path where you downloaded all additional wing datasets
+wm_path <- "..."
+
+
+### Load species list with manually added wing morphology info. Info from JEB2019, BB2001, Ostrich1989 and PLOS2007 were added manually from papers. ----
+speciesDf <- read.csv("InputData/wingMorphology_perSpecies_Feb2025.csv")
+head(speciesDf)
+# for the wing span range obtained from the birds of the world, take the middle value of the range
+speciesDf$wingSpanAverage_birdsOfWorld_cm <- sapply(sapply(strsplit(speciesDf$wingSpan_birdsOfWorld_cm, "-"), as.numeric), mean)
+
+### Load wing measurements (lift generation area and wing area) from Malo & Mata, Ecology and Evolution 2021 ----
+mm2021 <- read.table(paste0(wm_path,"/MaloMata2021_WingData.tab"), sep="\t", dec=",", na.strings = c("N/A",""))
+names(mm2021) <- mm2021[2,]
+mm2021 <- mm2021[-c(1:2),c("Scientific name","Lift generation area (in m2)","Wing area (S, in m2)","Source","Wing span (cm)","Source wing span", "Number of samples")]
+head(mm2021)
+
+mm2021$`Scientific name` <- gsub("\t|=|-","", mm2021$`Scientific name`)
+mm2021$`Lift generation area (in m2)` <- as.numeric(gsub(",",".", mm2021$`Lift generation area (in m2)`))
+mm2021$`Wing area (S, in m2)` <- as.numeric(gsub(",",".", mm2021$`Wing area (S, in m2)`))
+mm2021$`Wing span (cm)` <- as.numeric(gsub(",",".", mm2021$`Wing span (cm)`))
+
+table(speciesDf$species %in% mm2021$`Scientific name`)
+length(grep(paste(speciesDf$species, collapse="|"), mm2021$`Scientific name`, value=T))
+
+speciesDf[,c("WingSpan_cm_MM2021", "WingSpan_MM2021_origSource", "LiftGenArea_cm2_MM2021", "WingArea_cm2_MM2021", "WingArea_MM2021_origSource", "Nsamples_MM2021")] <- NA
+for(i in 1:nrow(speciesDf)){
+  j <- grep(speciesDf$species[i], mm2021$`Scientific name`)
+  if(length(j)>0){
+    speciesDf[i, "LiftGenArea_cm2_MM2021"] <- mm2021[j, "Lift generation area (in m2)"]*10000
+    speciesDf[i, "WingArea_cm2_MM2021"] <- mm2021[j, "Wing area (S, in m2)"]*10000
+    speciesDf[i, "WingSpan_cm_MM2021"] <- mm2021[j, "Wing span (cm)"]
+    speciesDf[i, c("WingArea_MM2021_origSource","WingSpan_MM2021_origSource","Nsamples_MM2021")] <- mm2021[j, c("Source","Source wing span","Number of samples")]
+  }}
+head(speciesDf)
+summary(speciesDf)
+
+# check the wing span value side by side, they are very similar for species for which we have values in both
+speciesDf[,c("wingSpanAverage_birdsOfWorld_cm","WingSpan_cm_MM2021")]
+# In order to calculate the wing area proxy, let's keep the values of MM and add the average values from birds of the world where MM are missing
+speciesDf$WS_final_cm <- speciesDf$WingSpan_cm_MM2021
+speciesDf$WS_final_cm[is.na(speciesDf$WingSpan_cm_MM2021)] <- speciesDf$wingSpanAverage_birdsOfWorld_cm[is.na(speciesDf$WingSpan_cm_MM2021)]
+speciesDf[,c("species","species_phy","wingSpanAverage_birdsOfWorld_cm","WingSpan_cm_MM2021","WS_final_cm")]
+
+### Load wing measurements from AVONET ----
+avonet <- read.csv(paste0(wm_path,"/AVONET_Supp1_Avonet3BirdTree.csv"))
+table(speciesDf$species_phy %in% avonet$Species3)
+speciesDf$species_phy[!speciesDf$species_phy %in% avonet$Species3]
+
+speciesDf <- merge(speciesDf, avonet[,c("Species3","Wing.Length","Kipps.Distance","Secondary1","Hand.Wing.Index")], by.x="species_phy", by.y="Species3", all.x=T)
+speciesDf <- speciesDf %>% rename(WingLength_mm=Wing.Length) %>% rename(Secondary1_mm=Secondary1)  %>% rename(KippsDistance_mm=Kipps.Distance)
+head(speciesDf)
+
+### Apply ellipse folded-wing area estimation from Hellen 2023 Ecology and Evolution "New methods for estimating the total wing area of birds" ----
+ellipse <- function(WL, S1, WS){(1/2 * pi * WL * S1) + ((WS - (2 * WL)) * S1)}
+speciesDf$wingArea_ellipse_cm2 <- ellipse(WL=speciesDf$WingLength_mm/10,
+                                          S1=speciesDf$Secondary1_mm/10, 
+                                          WS=speciesDf$WS_final_cm)
+head(speciesDf)
+
+### Calculate wing loading
+speciesDf$wingLoading_kgm2 <-  speciesDf$Body_mass_kg / (speciesDf$wingArea_ellipse_cm2 * 1e-4)
+range(speciesDf$wingLoading_kgm2, na.rm=T)
+speciesDf[,c("species", "wingLoading_kgm2")]
+
+write.csv(speciesDf, "InputData/wingMorphology_perSpecies_Feb2025.csv", row.names = F)
+
+
+#____________________________________________________
+## 2. Format dataset with body masses per species ####
+
+# !! Note: in order to run this script, the body mass dataset needs to be downloaded separate from:
+# http://dx.doi.org/10.1890/13-1917.1 
+# Hamish Wilman, Jonathan Belmaker, Jennifer Simpson, Carolina de la Rosa, Marcelo M. Rivadeneira, Walter Jetz. 2014. 
+# "EltonTraits 1.0: Species-level foraging attributes of the world's birds and mammals". Ecology 95:2027.
+# and stored in a path of choice:
+
+bm_path <- "..."
+
 # BodyMass-Value, Body mass (g). For Source Dunning08: Geometric mean of average values provided for both sexes (Dunning08). For Source GenAvg: genus average as provided by other sources
 # BodyMass-Source, Source of body mass values, Dunning08 or GenAvg PrimScale: inferred from select primary sources with mass and length data, and mass-length relationships parameterized at family level. GenAvg: genus average. Other: see comments.
 # BodyMass-SpecLevel, Indicates whether body mass values are based on species-level data, binary 1: based on species level data; 0: inferred from genus or family typical values
@@ -16,7 +103,7 @@ setwd("...")
 
 # Instead of importing the table we read the lines as there are some rows with different numbers of columns
 ## IMPORT THE BIRDS DATA
-tbl <- readLines("./DataAvailable/BodySizes_perSpecies_dataFrom_WilmanJetz2014/BirdFuncDat.txt")
+tbl <- readLines(paste0(bm_path, "BirdFuncDat.txt"))
 colNames <- unlist(strsplit(tbl[1], "\t")) #isolate headers
 tbl <- tbl[-1] #Remove them from the rest of the table
 # Check that all entries have the same number of columns (separator is tab \t)
@@ -43,7 +130,7 @@ write.csv(birdsInfo, "./DataAvailable/birdSpecies_bodyMasses.csv", row.names = F
 
 #_________________________________
 ## IMPORT THE BATS (MAMMALS) DATA
-tbl <- readLines("./DataAvailable/BodySizes_perSpecies_dataFrom_WilmanJetz2014/MamFuncDat.txt")
+tbl <- readLines(paste0(bm_path, "MamFuncDat.txt"))
 colNames <- unlist(strsplit(tbl[1], "\t")) #isolate headers
 tbl <- tbl[-1] #Remove them from the rest of the table
 # Check that all entries have the same number of columns (separator is tab \t)
@@ -95,40 +182,17 @@ write.csv(speciesInfo,  file="./DataAvailable/BodyMassInfos_allBirdBatsSpecies.c
 ## Import list of Movebank studies to download to check that the taxonomy names match for later merging
 
 speciesInfo <- read.csv("./DataAvailable/BodyMassInfos_allBirdBatsSpecies.csv")
-acc_studies <- read.csv("./DataAvailable/GpsAcc_MovebankDatasets/ACC_StudiesList_BirdsBats_June2022_perSpecies.csv")
+acc_studies <- read.csv("./DataAvailable/ACC_StudiesList_BirdsBats_June2022_perSpecies.csv")
 
 # Check if all species in our list of studies have a corresponding body mass values in the species_info table
 table(unique(acc_studies$species) %in% speciesInfo$species_latin)
 unique(acc_studies$species[which(!acc_studies$species %in% speciesInfo$species_latin)])
 
-# Some species occurr in our studies list with two different names, so we add both of them to the matching species list
-c("Chlamydotis undulata","Chlamydotis macqueenii") %in% acc_studies$species
-c("Milvus lineatus","Milvus migrans") %in% acc_studies$species
-c("Hieraaetus fasciatus","Aquila fasciata") %in% acc_studies$species
-
 # Build a dataset with the replacement names for those species for which the names don't match
 # On the left the names in our study list (matching name)
 # On the right the latin name in the downloaded body mass dataset (body mass name)
-matchingSpeciesDF <- data.frame(matrix(c(
-  "Aquila fasciata","Aquila fasciatus",
-  "Hieraaetus fasciatus","Aquila fasciatus",
-   "Ardea alba","Casmerodius albus",
-  "Torgos tracheliotus","Torgos tracheliotos",
-  "Theristicus branickii","Theristicus melanopis",
-  "Tringa incana","Heteroscelus incanus",
-  "Onychoprion fuscatus","Sterna fuscata",
-  "Spizaetus bartelsi","Nisaetus bartelsi",
-  "Apus melba","Tachymarptis melba",
-  "Anthropoides virgo","Grus virgo",
-  "Chlamydotis undulata","Chlamydotis undulata",
-  "Chlamydotis macqueenii","Chlamydotis undulata",
-  "Milvus migrans","Milvus migrans",
-  "Milvus lineatus","Milvus migrans",
-  "Hieraaetus wahlbergi","Aquila wahlbergi",
-  "Aquila spilogaster","Hieraaetus spilogaster",
-  "Larus scoresbii","Leucophaeus scoresbii"
-), ncol=2, byrow=T), stringsAsFactors=F)
-
+matchingSpeciesDF <- data.frame(matrix(
+  c("Anthropoides virgo","Grus virgo"), ncol=2, byrow=T), stringsAsFactors=F)
 names(matchingSpeciesDF) <- c("matchingSpeciesName","nameInBodyMassDF")
 
 # check that the two names match the respective datasets
@@ -144,20 +208,12 @@ table(speciesInfo$species_latin %in% speciesInfo$matchingSpeciesName)
 # Save it
 write.csv(speciesInfo,  file="./DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy.csv", row.names = F)
 
-# Add body mass values to the study list to know how many studies we have for different ranges of body masses 
-acc_studies_bodyMass <- merge(x=acc_studies, y=speciesInfo[,c("matchingSpeciesName","BodyMass_value","BodyMass_source")], by.x="species", by.y="matchingSpeciesName", all.x=T)
-table(is.na(acc_studies_bodyMass$BodyMass_value))
-unique(acc_studies_bodyMass$species[which(acc_studies_bodyMass$BodyMass_value<500)])
-
-write.csv(acc_studies_bodyMass, file="./DataAvailable/GpsAcc_MovebankDatasets/allACCstudies_BirdsBats_speciesBodyMass_new.csv", row.names = F)
-
-
 #_____________________
 ## RADAR species ####
 # Now do the same also for the species in the RADAR studies
 
 speciesInfo_gps <- read.csv("./DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy.csv")
-radarSpecies <- read.csv("./DataAvailable/RADARdata_YuvalNir/midjuly_midseptember_Desert_Med_Species-Final.csv")
+radarSpecies <- read.csv("./RadarData/SpeciesList_midjuly_midseptember_Desert_Med_Species-Final.csv")
 
 radarSpecies$species_latin <- paste(radarSpecies$Genus, speciesInfos$species, sep=" ")
 length(unique(radarSpecies$species_latin))

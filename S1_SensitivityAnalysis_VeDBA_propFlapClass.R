@@ -1,24 +1,29 @@
 
-#_________________________________________________________________
-# Robustness of the propFlap classification based on VeDBA ####
-#_________________________________________________________________
+#___________________________________________________________________
+# S1 - Robustness of the propFlap classification based on VeDBA ####
+#___________________________________________________________________
+
+# The number S1 refers to the section of the SM in which this analysis is shown
 
 library(mixR)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
-dir.create("Revision/NewSupplFigures", recursive = T)
 
-# Load dataset saved in step 3A
-load("DataFinalSummary/allStudies_allTags_allFlightSegments_binded_birdsBats_thresholdClass_transfGs_March2024_noDupl.RData") #object allStudies_noDups
+dir.create("SupplFigures")
 
-# Load the mixfit model produced in step 3B, line 48
+# Load dataset saved in step 3 (or available in the Edmond repository)
+allStudies_noDups <- readRDS("BiologgingData/allStudies_allTags_allFlightSegments_binded_birdsBats_thresholdClass_transfGs_March2024_noDupl.rds")
+
+# Load the dataset associated with flapProp produced in step 4 (or available in the Edmond repository)
+finalDf <- readRDS("BiologgingData/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds")
+
+# Load the mixfit model produced in step 4, line 57
 mod <- readRDS("DataFinalSummary/mixR_model_VeDBALognormBimodal_final.rds")
-
-# Load the dataset associated with flapProp saved in step 3B, line 143
-finalDf <- readRDS("DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs.rds")
 
 # Extract means of the two distributions and antimode
 mu1 <- mod$mu[1]
@@ -64,8 +69,6 @@ p_uncertainty <- ggplot(df_prob, aes(x = max_prob)) +
     y = 'Number of observations') +
   theme_classic(base_size = 11)
 print(p_uncertainty)
-# ggsave("Revision/NewSupplFigures/Fig_Sensitivity_propFlap_posteriorProb.pdf",
-#        p_uncertainty, width = 5, height = 4)
 
 #______________________________________
 ## Test sensitivity to threshold choice
@@ -125,8 +128,6 @@ p_sensitivity <- ggplot(sp_long,
   theme_classic(base_size = 10) +
   theme(strip.background = element_blank(), strip.text = element_text(face = 'bold'))
 print(p_sensitivity)
-# ggsave('Revision/NewSupplFigures/Fig_Sensitivity_propFlap_differentThresholds.pdf',
-#        p_sensitivity, width = 9, height = 3.5)
 
 
 #__________________________________________________
@@ -139,8 +140,8 @@ p_combined <- p_uncertainty + p_sensitivity +
   plot_annotation(tag_levels = 'A') &
   theme(plot.tag = element_text(face = 'bold', size = 13))
 
-ggsave('Revision/NewSupplFigures/Fig_Sensitivity_propFlap_VeDBAclassification.pdf',
+ggsave('SupplFigures/Fig_Sensitivity_propFlap_VeDBAclassification.pdf',
        p_combined, width = 7, height = 10)
-ggsave('Revision/NewSupplFigures/Fig_Sensitivity_propFlap_VeDBAclassification.png',
+ggsave('SupplFigures/Fig_Sensitivity_propFlap_VeDBAclassification.png',
        p_combined, width = 7, height = 10, dpi = 300, units = "in")
 

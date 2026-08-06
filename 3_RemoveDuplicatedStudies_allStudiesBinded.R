@@ -4,53 +4,9 @@
 
 # This combined data.frame will have one entry per gps fix, only for commuting segments
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
-
-#_________
-# Add this small step at the beginning, applied to ALL files, just to add a column containing the number of ACC axes (we forgot to add it in step 1A)
-
-fls <- list.files("DataProcessed", "_dfGpsAcc_allSegmentsID_thresholdClass", full.names=T)
-fls_acc <- list.files("DataDownloaded", "onlyAcc", full.names=T)
-
-err <- lapply(fls, function(f)try({
-  print(f)
-  studyId <- strsplit(f, "_")[[1]][2]
-  load(f) #object df_allSegm
-  if(grepl("Flavio|David|Allison|Emily|Paolo", f)){ #These external datasets (processed in scripts 1AB, dailydiaries and technosmart tags) all collected ACC on 3 axes
-    df_allSegm$acc_axes <- "XYZ"
-    df_allSegm$acc_Naxes <- 3
-  }
-  if(!"acc_axes" %in% names(df_allSegm)){
-    load(grep(studyId, fls_acc, value=T)) #data.frame, object accDf
-    accDf <- as.data.frame(accDf)
-    axesCol <- grep("acceleration.axes|acceleration_axes", names(accDf), value=T)
-    if(length(axesCol)==2){
-      axesCol <- axesCol[which.min(c(length(which(is.na(accDf[,axesCol[1]]))), length(which(is.na(accDf[,axesCol[2]])))))] #compare the number of NAs and exclude the one with more
-    } # create two NA axes column (default)
-    df_allSegm$acc_axes <- NA
-    df_allSegm$acc_Naxes <- NA
-    if("acc_event_id" %in% names(df_allSegm) | length(axesCol)>0){ #some datasets don't have an acc_event_id column or an axes column
-      if(length(unique(df_allSegm$acc_event_id[!is.na(df_allSegm$acc_event_id)]))!=nrow(df_allSegm[!is.na(df_allSegm$acc_event_id),]) | 
-         length(unique(accDf$event_id))!=nrow(accDf)){
-        if(length(unique(accDf[,axesCol]))==1){
-          df_allSegm$acc_axes <- as.character(unique(accDf[,axesCol]))
-          df_allSegm$acc_Naxes <- nchar(as.character(unique(accDf[,axesCol])))
-        }
-      }else{
-        df_allSegm <- merge(df_allSegm, accDf[,c("event_id", axesCol)], by.x="acc_event_id", by.y="event_id", all.x=T)
-        names(df_allSegm)[ncol(df_allSegm)] <- "acc_axes"
-        df_allSegm$acc_axes <- as.character(df_allSegm$acc_axes)
-        df_allSegm$acc_Naxes <- nchar(df_allSegm$acc_axes)
-      }
-    }
-    save(df_allSegm, file=f) #overwrite existing file with added column
-  }
-}))
-
-# Check errors
-is.error <- function(x) inherits(x, "try-error")
-errors <- vapply(err, is.error, logical(1))
-fls <- fls[51:length(fls)][errors]
 
 
 #__________________________
@@ -182,7 +138,7 @@ table(allStudies$deviceType)
 save(allStudies, file="DataFinalSummary/allStudies_allTags_allFlightSegments_binded_birdsBats_thresholdClass_transfGs_March2024.RData")
 
 #______________________________________________________________________
-# Check and remove duplicated individuals across movebank studies ####
+# Check and remove duplicated individuals across Movebank studies ####
 
 # In Movebank it is possible that a same individual has been stored twice in different studies, and potentially with different names
 # So it is important to check both individual id and tag id
@@ -289,13 +245,8 @@ length(unique(allStudies_noDups$study.name))
 length(unique(allStudies_noDups$study.name[allStudies_noDups$dataSource=="External"]))
 table(allStudies_noDups$dataSource)
 
-save(allStudies_noDups, file="DataFinalSummary/allStudies_allTags_allFlightSegments_binded_noDuplicatedIndividuals_birdsBats_thresholdClass_transfGs_March2024.RData")
-
 #_______________________________________________________
 # Quick sanity checks and data standards summaries ####
-#_______________________________________________________
-
-load("DataFinalSummary/allStudies_allTags_allFlightSegments_binded_noDuplicatedIndividuals_birdsBats_thresholdClass_transfGs_March2024.RData") #object allStudies_noDups
 
 # In madebytheo tags, all bursts are 20 Hz, and some bursts only contain 0 for all values in the burst
 # This only happens for one species in one study, below you can see the data exploration.
@@ -315,48 +266,32 @@ toRemove <- which(allStudies_noDups$study.id == 180156318 &
                     allStudies_noDups$meanVedba_Gs %in% minmax)
 allStudies_noDups <- allStudies_noDups[-toRemove,]
 
-# Replace meanVedba plot after removing vedba 0s:
-anser <- allStudies_noDups[allStudies_noDups$study.id == 180156318 & allStudies_noDups$individual.taxon.canonical.name == "Anser albifrons",]
-png("Plots/finalFlightSegments_thresholdClassification/selectedCommutingSegments_meanVedba/study_180156318_Anser-albifrons_madebytheo_finalSelectedSegments_MeanVedbaHistogram.png",
-    width=8,height=6,units="in",res=300)
-hist(anser$meanVedba_Gs, breaks = "FD", col="grey", xlab="mean VeDBA (Gs)", main="")
-dev.off()
-
 # Remove missing values in Vedba (only 25 observations)
 table(complete.cases(allStudies_noDups$meanVedba_Gs))
 allStudies_noDups <- allStudies_noDups[complete.cases(allStudies_noDups$meanVedba_Gs),]
 
-# Re-save the dataset without these 430 observations that had meanVedba at their min and max (probably because at the extremes of what the sensor could collect)
-save(allStudies_noDups, file="DataFinalSummary/allStudies_allTags_allFlightSegments_binded_birdsBats_thresholdClass_transfGs_March2024_noDupl.RData")
+#____________
+# Save dataset without duplicates. This dataset is stored in the Edmond repository
+saveRDS(allStudies_noDups, file="BiologgingData/allStudies_allTags_allFlightSegments_binded_birdsBats_thresholdClass_transfGs_March2024_noDupl.rds")
 
-# Now make a table with the final sampling frequencies
+#__________
+# Summaries
+
+# Some descriptive stats on the acc sampling schedules we have
+table(allStudies_noDups$acc_axes)
 table(allStudies_noDups$acc_sampl_freq_per_axis)
-summary(allStudies_noDups$acc_sampl_freq_per_axis)
-# Only the oilbirds have 1 Hz, but for now we keep them
-table(allStudies_noDups$deviceType[which(allStudies_noDups$acc_sampl_freq_per_axis==1)])
-table(allStudies_noDups$study.name[which(allStudies_noDups$acc_sampl_freq_per_axis==1)])
-
-overView_ACCsamplFreq <- table(allStudies_noDups$individual.taxon.canonical.name, 
-                               allStudies_noDups$acc_sampl_freq_per_axis)
-write.csv(overView_ACCsamplFreq, "DataFinalSummary/overview_ACCsamplingFreq_perSpecies_thresholdClass.csv", row.names = F)
-
-length(unique(allStudies_noDups$individual.taxon.canonical.name))
-unique(allStudies_noDups$study.name[allStudies_noDups$dataSource=="External"])
-length(unique(allStudies_noDups$individual.taxon.canonical.name[allStudies_noDups$acc_sampl_freq_per_axis>8]))
-nrow(allStudies_noDups[which(allStudies_noDups$meanVedba==0 & allStudies_noDups$acc_sampl_freq_per_axis>8),])
-
-# Filter out observations with ACC data with very low sampling frequency (less than 8 points in a second)
-#allStudies_noDups <- allStudies_noDups[which(allStudies_noDups$acc_sampl_freq_per_axis>8),]
-
-# time difference from gps goes from 0 to 5 min, just to keep in mind
-summary(allStudies_noDups$diff_acc_time_s)
-
-#plot(meanVedba_Gs~acc_sampl_freq_per_axis, data=allStudies_noDups)
-
-# Some descriptive stats on the acc sampling schedules we have so far
 summary(allStudies_noDups$acc_sampl_freq_per_axis)
 summary(allStudies_noDups$acc_burst_duration_s)
 summary(allStudies_noDups$n_samples_per_axis)
+
+overView_ACCsamplFreq <- table(allStudies_noDups$individual.taxon.canonical.name, 
+                               allStudies_noDups$acc_sampl_freq_per_axis)
+
+length(unique(allStudies_noDups$individual.taxon.canonical.name))
+unique(allStudies_noDups$study.name[allStudies_noDups$dataSource=="External"])
+
+# summary of the time difference between gps and acc
+summary(allStudies_noDups$diff_acc_time_s)
 
 # Check the distribution of meanVedba per device type
 table(allStudies_noDups$deviceType)
@@ -368,12 +303,4 @@ hist(allStudies_noDups$meanVedba_Gs[allStudies_noDups$deviceType=="milsar"], bre
 hist(allStudies_noDups$meanVedba_Gs[allStudies_noDups$deviceType=="madebytheo"], breaks="FD", main="madebytheo")
 hist(allStudies_noDups$meanVedba_Gs, breaks="FD", main="All devices")
 
-# Export a csv with the infos of the studies included so far, until the Vedba analysis
-summaryStudyInfos <- allStudies_noDups[!duplicated(allStudies_noDups[,c("study.name","study.id","dataSource")]), c("study.name","study.id","dataSource")]
-summaryStudyInfos_MB <- summaryStudyInfos[summaryStudyInfos$dataSource == "Movebank",]
-write.csv(summaryStudyInfos, "DataFinalSummary/studiesIncludedInCOT_quickCheck_step3A.csv", row.names = F)
-write.csv(summaryStudyInfos_MB, "DataFinalSummary/studiesIncludedInCOT_fromMovebank_quickCheck_step3A.csv", row.names = F)
 
-# Check eobs tag generations:
-onlyEobs <- allStudies_noDups[allStudies_noDups$deviceType=="eobs",]
-table(onlyEobs$study.name[onlyEobs$tag.local.identifier<=2241])

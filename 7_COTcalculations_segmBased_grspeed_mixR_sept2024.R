@@ -3,10 +3,15 @@
 # CALCULATE COT FROM OUR DATA
 #____________________________
 
+# !! To run this script you will need the intermediary results from:
+# script 0C (flappingModel_GuiguenoData.RData) and from script 6 (finalSummaryDataset_perSegment_fromFix_Feb2025_max10hours.rds)
+
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
 
-# Import our data (one entry per segment classified as commuting)
-allSegmDfs <- readRDS("DataFinalSummary/finalSummaryDataset_perSegment_fromFix_Feb2025_max10hours.rds") #dataset with one row per segment
+# Import data from script 6 (one entry per segment classified as commuting)
+allSegmDfs <- readRDS("DataFinalSummary/finalSummaryDataset_perSegment_fromFix_Feb2025_max10hours.rds")
 
 #_______________
 ## Calculate BMR
@@ -30,7 +35,8 @@ allSegmDfs$theor_MR_pass_W <- (2 * allSegmDfs$BMR_W)
 ## Calculate flapping MR (need to run script 0C first)
 
 # Predict theoretical cost of flapping based on the lm model on Guigueno et al data
-load("DataFinalSummary/flappingModel_KylesData.RData") #modBirds, modBats, calculated in script 0C
+load("DataFinalSummary/flappingModel_GuiguenoData.RData") #modBirds, modBats, calculated in script 0C
+
 allSegmDfs$log_bodyMass_Kg <- log(allSegmDfs$Body_mass_kg)
 allSegmDfs$theor_MR_flap_W <- NA
 allSegmDfs$theor_MR_flap_W[!allSegmDfs$species %in% c("Pteropus lylei","Eidolon helvum")] <- exp(predict(modBirds, newdata=allSegmDfs[!allSegmDfs$species %in% c("Pteropus lylei","Eidolon helvum"),]))
@@ -68,20 +74,19 @@ allSegmDfs$theor_COT_alex_J_KgM <- 3.6*(allSegmDfs$Body_mass_kg)^(-0.31)
 # Show variation sorting species by body mass:
 boxplot(log(obs_tot_COT_J_KgM)~log_bodyMass_Kg, data=allSegmDfs)
 
-# Re-save the dataset with the COT info
-saveRDS(allSegmDfs, file="DataFinalSummary/finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.rds")
-
 
 #__________________________________________________
 ### Add wing information per species to the dataset
 
-wing <- read.csv("DataFinalSummary/4supplementary_finalSpeciesList_wingMorphology_Feb2025_final.csv")
-
+wing <- read.csv("InputData/wingMorphology_perSpecies_Feb2025.csv")
 allSegmDfs_wing <- merge(allSegmDfs, wing[,c("species","wingArea_ellipse_cm2","wingLoading_kgm2")], by="species", all.x=T)
 
-# Re-save the dataset with the wing information
-saveRDS(allSegmDfs_wing, file="DataFinalSummary/finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.rds")
-write.csv(allSegmDfs_wing, file="DataFinalSummary/finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv", row.names = F)
+
+#___________________________
+### Save final model dataset
+
+# save the dataset with COT and wing information
+write.csv(allSegmDfs_wing, file="ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv", row.names = F)
 
 #_______________________________________________
 ### Plot theoretical vs observed COT per species

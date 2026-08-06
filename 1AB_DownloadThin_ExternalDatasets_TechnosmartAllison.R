@@ -1,3 +1,7 @@
+
+# All scripts named 1AB refer to the same processing steps done in script 1A and 1B for studies downloaded directly from Movebank
+# adapted for dataset that were sent externally (as csv) because of different data formats (different devices)
+
 #____________________
 # TECHNOSMART ####
 #____________________
@@ -10,29 +14,36 @@ library(move)
 library(geosphere)
 library(ggplot2)
 theme_set(theme_bw())
-
 library(sf)
 library(maps)
 world_map <- map_data("world")
-
 options(digits.secs=4)
-
 library(plyr)
 library(doParallel)
 doParallel::registerDoParallel(6)
 
-setwd("...")
-source("Scripts/COT_publ/COT_functions.R")
-
 # error function for try
 is.error <- function(x) inherits(x, "try-error")
+
+
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+setwd("...")
+
+# Create folder to store processed data, study by study
+dir.create("DataProcessed")
+
+# store the path where you downloaded the scripts
+codePath <- "..."
+
+source(paste0(codePath, "COT_publ/COT_functions.R")) #For direction360
 
 
 #____________________________________________
 # Data Allison Patterson, pre-processed ####
 
 # list the zip folders containing the raw data per species
-zipFolds <- list.files("DataAvailable/GpsAcc_ExternalDatasets/AllisonPattersonsData/rawAccData/rawConvertedAccData_csv_5_species", pattern=".zip", full.names=T)
+zipFolds <- list.files("DataAvailable/GpsAcc_ExternalDatasets/AllisonPattersonsData/rawAccData/rawConvertedAccData", pattern=".zip", full.names=T)
+
 # Import the deployment lists with species name and start/end deployments 
 dep_data_sub <- read.csv("DataAvailable/GpsAcc_ExternalDatasets/AllisonPattersonsData/pre-processedData/AllisonsData_depId-species4accIndividuals_removedExclude.csv", as.is=T)
 dep_data_sub$time_released <- as.POSIXct(dep_data_sub$time_released, format="%Y-%m-%d %H:%M:%OS", tz="UTC")
@@ -127,6 +138,8 @@ for(z in 1:nrow(SpeciesIDs)){
   gpsDf$study.name <- if(spCode=="RBME"){paste0("KyleElliott_",spCode)}else{paste0("AllisonPatterson_",spCode)}
   gpsDf$event.id <- 1:nrow(gpsDf)
   gpsDf$deviceType <- "Technosmart_axytreck"
+  gpsDf$acc_axes <- "XYZ"
+  gpsDf$acc_Naxes <- 3
   # In this data, we averaged vedba across 10 seconds (5 sec before and after each GPS point) at a frequency of 25 or 50 Hz
   names(gpsDf)[names(gpsDf) %in% c("burstDur","sampFreq")] <- c("acc_burst_duration_s","acc_sampl_freq_per_axis")
   gpsDf$n_samples_per_axis <- gpsDf$acc_sampl_freq_per_axis * gpsDf$acc_burst_duration_s
@@ -177,109 +190,4 @@ lapply(fls, function(f){
   save(df_geom, file=paste0("DataProcessed/studyId_AllisonsData_",sub(" ","-",spName),"_Technosmart_dfGpsAcc_geom_10min.RData"))
   
 })
-
-
-#___________________________________________
-# Barn own (Paolo Becciu) pre-processed ####
-
-df <- read.csv("DataAvailable/GpsAcc_ExternalDatasets/PaoloBecciuData/barnOwls_annotated_individuals_2020_complete.csv", as.is=T)
-
-# ACC data are collected continuously at 50 Hz but are then averaged per second to match the GPS sampling frequency. 
-
-df$timestamp <- as.POSIXct(df$timestamp, format="%Y-%m-%dT%H:%M:%OSZ", tz="UTC")
-# remove missing coorinates
-df <- df[complete.cases(df[,c("location.lon","location.lat")]),]
-# add empty ACC variables
-df$meanVedba <- NA
-df$burstDur <- NA
-df$sampFreq <- NA
-# split by individual
-gps_ls <- split(df, df$TagID)
-# Check timelags between GPS observations, they are about 1 second
-summary(unlist(sapply(gps_ls, function(df_ind){
-  df_ind <- df_ind[order(df_ind$timestamp),]
-  return(as.numeric(difftime(df_ind$timestamp[-1], df_ind$timestamp[-length(df_ind$timestamp)], units="secs")))
-})))
-# Plot the tracks
-cols <- rainbow(length(gps_ls))
-plot(df$location.lon, df$location.lat, type="n")
-lapply(1:length(gps_ls), function(i) lines(gps_ls[[i]]$location.lon, gps_ls[[i]]$location.lat, col=cols[i]))
-
-# Thin data to 5 minutes, associate ACC 10 seconds around each GPS point and calculate track geometry infos
-
-table(duplicated(df[,c("TagID","timestamp")]))
-
-gpsThin_ls <- lapply(gps_ls, function(gpsAcc)try({
-  print(unique(gpsAcc$TagID))
-  # Order trip observations by timestamp
-  gpsAcc <- gpsAcc[order(gpsAcc$timestamp),]
-  # remove duplicates
-  gpsAcc <- gpsAcc[!duplicated(gpsAcc[,c("TagID","timestamp")]),]
-  # Thin the data to 10+-5 min
-  # (for eobs this step was already done in previous step before associating acc)
-  indAmt <- mk_track(tbl=gpsAcc, all_cols=T,
-                     .x=location.lon, .y=location.lat, crs = st_crs(4326),
-                     .t=timestamp, order_by_ts = T, check_duplicates = T)
-  indAmt <- track_resample(indAmt, rate = minutes(10), tolerance = minutes(5), start = 1)
-  m <- as_move(indAmt)
-  # Remove outliers based on speed (max 50 m/s)
-  while(any(move::speed(m) >= 50) == T){
-    m <- m[which(c(NA, move::speed(m)) < 50)]
-  }
-  # Add variables about the track geometry
-  if(n.locs(m)>1){
-    m$timeLag_min <- c(NA, timeLag(m, units="mins"))
-    m$height <- NA
-    m$altitudeDiff <- NA 
-    m$vertSpeed_ms <- NA
-    m$stepLength_m <- c(NA, move::distance(m))
-    m$groundSpeed_ms <- c(NA, move::speed(m))
-    m$segmentDir <- c(NA, direction360(bearing(m)[-nrow(m)]))
-    m$turnAngle <- c(NA, turnAngleGc(m), NA)  # Add variables about the track geometry
-    return(as.data.frame(m))
-  }
-}))
-# Exclude empty elements and errors from the list and bind it
-gpsThin_ls <- gpsThin_ls[which(!sapply(gpsThin_ls, is.null))]
-is.error <- function(x) inherits(x, "try-error")
-gpsThin_ls <- gpsThin_ls[!vapply(gpsThin_ls, is.error, logical(1))]
-# For each individual average VeDBA over 10 sec (5 s before and after each GPS point) that is on 60*1=60 ACC observations
-df_geom_ls <- lapply(gpsThin_ls, function(gps){
-  dfID <- df[df$TagID == unique(gps$TagID),]
-  for(i in 2:nrow(gps)){
-    gpsTime <- gps[i,"timestamps"]
-    accSub <- dfID[dfID$timestamp >= gpsTime-5 & dfID$timestamp <= gpsTime+5, c("timestamp","X","Y","Z","VeDBA")] #subset of acc within 10 s around each gps point (+/- 5 sec)
-    if(nrow(accSub > 0)){
-      gps$burstDur[i] <- round(as.numeric(difftime(accSub$timestamp[nrow(accSub)], accSub$timestamp[1], units="secs")))
-      gps$sampFreq[i] <- 50 #(original sampl freq of 50 Hz, reduced to a 1 Hz VeDBA average)
-      gps$meanVedba[i] <- mean(accSub$VeDBA) # average vedba and associate to the gps point
-    }
-  }
-  return(gps)
-})
-df_geom <- do.call(rbind, df_geom_ls)
-# Import body mass infos and merge body mass info to the dataframe
-speciesInfo <- read.csv("/home/mscacco/ownCloud/Martina/ProgettiVari/COT/DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy.csv", as.is=T)
-
-df_geom$individual.taxon.canonical.name <- "Tyto alba"
-df_geom$species_english <- speciesInfo$species_english[speciesInfo$species_latin == unique(df_geom$individual.taxon.canonical.name)]
-df_geom$BodyMass_value <- speciesInfo$BodyMass_value[speciesInfo$species_latin == unique(df_geom$individual.taxon.canonical.name)]
-df_geom$study.name <- "Barn Ownls (Tyto alba) from P.Becciu and K.Schalcher"
-df_geom$event.id <- 1:nrow(df_geom)
-df_geom$deviceType <- "Technosmart"
-# remove unnecessary columns
-df_geom[,grep("dynamic|static|ODBA|VeDBA|prey", names(df_geom), value=T)] <- NULL
-# change column names to match other datasets
-names(df_geom)[names(df_geom) %in% c("TagID","timestamps")] <- c("timestamp","individual.local.identifier")
-names(df_geom)[names(df_geom) %in% c("burstDur","sampFreq")] <- c("acc_burst_duration_s","acc_sampl_freq_per_axis")
-df_geom$n_samples_per_axis <- df_geom$acc_sampl_freq_per_axis * df_geom$acc_burst_duration_s
-# Remove data points for which no ACC information is available
-df_geom <- df_geom[complete.cases(df_geom$meanVedba),]
-# save the updated dataset with geometry and additional columns
-save(df_geom, file="DataProcessed/studyId_PaoloBecciuData_Tyto-alba_Technosmart_dfGpsAcc_geom_10min.RData")
-
-
-
-
-
 

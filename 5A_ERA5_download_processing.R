@@ -6,18 +6,26 @@
 ## Download environmental variables (ERA5 data)
 ## Script and functions modified from: https://github.com/kamransafi/ERA5_move2
 ## We will download and annotate U_wind, V_wind, and all variables needed for the calculation of oroUplift and thermUplift
-## To run this script the dataset resulting from the script "3B.VEDBAclassification_MixR_createFinalDf.R" is needed
+## To run this script the dataset "FinalDf_perPoint_VedbaGs_flappingProbs.rds" resulting from the script "4.VEDBAclassification_MixR_createFinalDf.R" is needed
+## To make annotation possible, environmental data are downloaded and stored as separate daily rasters, and are associated to the dataset in the next script.
 
+# store the path where you downloaded the scripts and import functions
+codePath <- "..."
+source(paste0(codePath, "COT_publ/ERA5_functions_download_annotate_calculateUpliftProxies_2024Aug.R")) #For direction360
 
-setwd("...") # to store env data
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which shuld also be the parent folder where you stored all intermediate results of previous scripts.
+setwd("...")
+
+# import dataset to annotate with env data
+finalDf <- readRDS("DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs.rds")
+
+# Create and store a path to a directory to store the environmental data
 dir.create("ERA5downloads")
 localPath <- "ERA5downloads"
 
-cot_path <- "..." # local folder with data and scripts
-source(paste0(cot_path,"Scripts/COT_publ/ERA5_functions_download_annotate_calculateUpliftProxies_2024Aug.R")) # load own function library
-finalDf <- readRDS(paste0(cot_path,"DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs.rds"))
 
-# Store credentials, you can find them (or request them) here: https://cds.climate.copernicus.eu/user/login?destination=%2F%23!%2Fhome
+# Store CDS credentials, you can find them (or request them) here: https://cds.climate.copernicus.eu/user/login?destination=%2F%23!%2Fhome
 wf_set_key(user = "",
            key = "",
            service = "cds")

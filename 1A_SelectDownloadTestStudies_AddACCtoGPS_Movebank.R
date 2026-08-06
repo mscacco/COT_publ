@@ -2,43 +2,21 @@
 # Process datasets/studies available on Movebank ####
 #____________________________________________________
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
 
-#____________________________________________________________
-# Import general info from studies identified in step 0A ####
+# Create a folder to download studies, do not change name to ensure functionality
+dir.create("DataDownloaded")
 
-allStudies <- read.csv("DataAvailable/GpsAcc_MovebankDatasets/allACCstudies_BirdsBats_downloadPermissionT_old.csv", as.is=T)
+# store the path where you downloaded the scripts
+codePath <- "..."
 
-allStudies$timestamp_first_deployed_location <- strptime(allStudies$timestamp_first_deployed_location, format="%Y-%m-%d %H:%M:%S", tz="UTC")
-allStudies$timestamp_last_deployed_location <- strptime(allStudies$timestamp_last_deployed_location, format="%Y-%m-%d %H:%M:%S", tz="UTC")
-allStudies[,c("species_english","species","number_of_deployed_locations","deployment_duration_days","study_name","BodyMass_value")]
 
-# Filter out studies with very few locations
-# Let's say that we want a minimum of 1 week worth of data collected at 15 min sampling
-minLocs <- 7*24*4 # 4 obs per hour, per 7 days
-studiesSub <- allStudies[which(allStudies$number_of_deployed_locations > minLocs &
-                           allStudies$deployment_duration_days > 7),]
-studiesSub$study_name
-summary(studiesSub$number_of_deployed_locations)
+allStudies <- read.csv("DataAvailable/allACCstudies_BirdsBats_downloadPermissionT_old.csv", as.is=T)
 
-# Filter out ICARUS studies (very few ACC observations)
-studiesSub <- studiesSub[grep("ICARUS", studiesSub$study_name, invert=T, value=),]
-
-# Remove duplicated studies and tests
-# StudiesSub contains all info per species (therefore the same study could be duplicated if it includes multiple species)
-StudiesSub_noDup <- studiesSub[!duplicated(studiesSub[,c("study_name","study_id","timestamp_first_deployed_location","timestamp_last_deployed_location")]),]
-# Make sure each study has a unique ID
-nrow(StudiesSub_noDup)==length(unique(StudiesSub_noDup$study_id))
-
-# Some studies might be only for testing, we remove them based on the name
-if(length(grep("test|Test", StudiesSub_noDup$study_name, value=T))>0){
-  StudiesSub_noDup <- StudiesSub_noDup[-grep("test|Test", StudiesSub_noDup$study_name),]
-}
-
-write.csv(StudiesSub_noDup, "DataAvailable/GpsAcc_MovebankDatasets/newStudies_toProcess.csv", row.names=F)
-
-#__________________________________________
-# Download GPS data from these studies ####
+#______________________________________________
+# Download GPS data from available studies ####
 
 library(plyr)
 library(tools)
@@ -48,11 +26,10 @@ library(move)
 detectCores()
 doParallel::registerDoParallel(5)
 
-dir.create("DataDownloaded")
 
 creds <- movebankLogin()
 
-# Import the body mass infos and check that all species names match:
+# Import the body mass infos created in script 0B and check that all species names match:
 speciesMassInfos <- read.csv("DataAvailable/BodyMassInfos_allBirdBatsSpecies_matchTaxonomy_gps+radar.csv", as.is=T)
 
 # Define function to find errors in the list after the "try"
@@ -242,6 +219,7 @@ setwd("...")
 
 fls_gps <- list.files("DataDownloaded", "onlyGps", full.names=T)
 fls_acc <- list.files("DataDownloaded", "onlyAcc", full.names=T)
+
 # Make sure to select only GPS files (of each individuals) for which ACC files also exist
 fls <- fls_gps[sapply(strsplit(fls_gps, "_"),"[",2) %in% sapply(strsplit(fls_acc, "_"),"[",2)]
 
@@ -269,7 +247,7 @@ lapply(tagRef_ls, head)
 save(tagRef_ls, file="DataDownloaded/referenceTable_manufacturer_allStudies.rdata")
 
 #____________
-#Now associate gps and acc variables (obtained depending on the tag manufacturer)
+# Associate gps and acc variables (obtained depending on the tag manufacturer)
 
 library(plyr)
 library(doParallel)
@@ -279,7 +257,7 @@ library(move)
 library(lubridate)
 library(data.table)
 
-source("Scripts/COT_publ/COT_functions.R") # load own function library (ACCtoGPS function)
+source(paste0(codePath, "COT_publ/COT_functions.R")) # load own function library (ACCtoGPS function)
 is.error <- function(x) inherits(x, "try-error")
 
 options(digits=6) #for decimals
@@ -299,6 +277,7 @@ if(length(flsDone)>0){
 
 results <- lapply(flsToDo, function(f)try({
   studyId <- strsplit(f, "_")[[1]][2]
+  # ACC
   # Import accelerometry data downloaded in the previous step
   load(grep(studyId, fls_acc, value=T)) #data.frame, object accDf
   # Use the tag reference df to assign device type to each individual
@@ -306,6 +285,7 @@ results <- lapply(flsToDo, function(f)try({
   deviceType <- studyTagRef$manufacturer_name[!is.na(studyTagRef$manufacturer_name)]
   if(length(deviceType)==0){deviceType <- strsplit(f, "_")[[1]][3]}
   deviceType <- paste(unique(deviceType), collapse="|")
+  # GPS
   # Import the gps data for that study and split by individual
   load(f) #data.frame, object gpsDf
   print(paste0(unique(gpsDf$study.name)," - ",studyId))
@@ -316,6 +296,7 @@ results <- lapply(flsToDo, function(f)try({
   if(all(is.na(gpsDf$deviceType))){gpsDf$deviceType <- deviceType}
   if(length(unique(studyTagRef$manufacturer_name[!is.na(studyTagRef$manufacturer_name)]))==1){gpsDf$deviceType[which(is.na(gpsDf$deviceType))] <- deviceType}
   gpsDf$manufacturer_name <- NULL
+  # MERGE BOTH
   #Work on each individual separately
   gps_ls <- split(gpsDf, as.character(gpsDf$individual.local.identifier))
   acc_ls <- split(accDf, as.character(accDf$individual_local_identifier))
@@ -356,8 +337,8 @@ results <- lapply(flsToDo, function(f)try({
         dupRows <- gps[gps$timestamp %in% gps[dups,"timestamp"],]
         eventsToDrop <- dupRows$event.id[!dupRows$eobs.status=="A"]
         gps <- gps[!gps$event.id %in% eventsToDrop,]
-        # Exclude ACC data that have only X or Y axis
-        acc <- acc[which(!as.character(acc[, axesCol]) %in% c("X","Y")),]
+        # Exclude ACC data that are not triaxial
+        acc <- acc[which(as.character(acc[, axesCol]) == "XYZ"),]
         # Exclude rows with missing acc data
         acc <- acc[which(complete.cases(acc[, accRawCol])),]
         # Associate to each gps location the ACC EVENT ID of the acc values closest in time (within 5 min) using self made function
@@ -369,8 +350,10 @@ results <- lapply(flsToDo, function(f)try({
         if(nrow(accSub)>0){ 
           #if(length(unique(accSub[, axesCol]))>1 ){ #Continue only if number of acc axes doesn't vary within the same individual
           accDf_vedba <- createVedbaDF_eobs(acc=accSub, accEventCol="acc_event_id", accRawCol=accRawCol, axesCol=axesCol)
+          accDf_vedba$acc_axes <- "XYZ"
+          accDf_vedba$acc_Naxes <- 3
           # Merge the average vedba values to the gps based on acc_event_id
-          gpsAcc <- merge(gpsAcc, accDf_vedba[,c("acc_event_id","n_samples_per_axis","acc_burst_duration_s","acc_sampl_freq","meanVedba","cumVedba")], 
+          gpsAcc <- merge(gpsAcc, accDf_vedba[,c("acc_event_id","acc_axes","acc_Naxes","n_samples_per_axis","acc_burst_duration_s","acc_sampl_freq","meanVedba","cumVedba")], 
                           by="acc_event_id", all.x=T)
           #nrow(gpsAcc[which(gpsAcc$meanVedba==0),])
           #print(table(is.na(gpsAcc$meanVedba)))
@@ -408,7 +391,6 @@ flsToTransform <- flsToTransform[!sapply(strsplit(flsToTransform, "_"),"[",2) %i
 lapply(flsToTransform, function(f)try({
   print(f)
   studyId <- strsplit(f, "_")[[1]][2]
-  # Import gps and accelerometry data downloaded in the previous step
   load(f) #object gpsDf
   load(grep(studyId, fls_acc, value=T)) #data.frame, object accDf
   # transform data.table in data.frame
@@ -439,25 +421,25 @@ lapply(flsToTransform, function(f)try({
     acc$acc_event_id <- as.character(acc$acc_event_id)
     if(nrow(acc) > 0){
       # extract the column name of the raw acc values and axes and tag id
+      accRawCol <- grep("accelerations_raw|accelerations.raw", names(acc), value=T)
+      axesCol <- grep("acceleration.axes|acceleration_axes", names(acc), value=T)
+      tagidCol <- grep("tag.local.identifier|tag_local_identifier", names(acc), value=T)
+      # make sure the tag id column is numeric (but careful with factors)
+      acc[,tagidCol] <- as.integer(as.character(acc[,tagidCol]))
+      # if more than one column exists for acc raw and axes, remove the ones with more NAs (otherwise the function will detect multiple columns with raw acc)
+      if(length(accRawCol)==2){
+        rawToDrop <- accRawCol[which.max(c(length(which(is.na(acc[,accRawCol[1]]))), length(which(is.na(acc[,accRawCol[2]])))))] #compare the number of NAs and exclude the one with more
+        acc[,rawToDrop] <- NULL
         accRawCol <- grep("accelerations_raw|accelerations.raw", names(acc), value=T)
+      }
+      if(length(axesCol)==2){
+        axesToDrop <- axesCol[which.max(c(length(which(is.na(acc[,axesCol[1]]))), length(which(is.na(acc[,axesCol[2]])))))] #compare the number of NAs and exclude the one with more
+        acc[,axesToDrop] <- NULL
         axesCol <- grep("acceleration.axes|acceleration_axes", names(acc), value=T)
-        tagidCol <- grep("tag.local.identifier|tag_local_identifier", names(acc), value=T)
-        # make sure the tag id column is numeric (but careful with factors)
-        acc[,tagidCol] <- as.integer(as.character(acc[,tagidCol]))
-        # if more than one column exists for acc raw and axes, remove the ones with more NAs (otherwise the function will detect multiple columns with raw acc)
-        if(length(accRawCol)==2){
-          rawToDrop <- accRawCol[which.max(c(length(which(is.na(acc[,accRawCol[1]]))), length(which(is.na(acc[,accRawCol[2]])))))] #compare the number of NAs and exclude the one with more
-          acc[,rawToDrop] <- NULL
-          accRawCol <- grep("accelerations_raw|accelerations.raw", names(acc), value=T)
-        }
-        if(length(axesCol)==2){
-          axesToDrop <- axesCol[which.max(c(length(which(is.na(acc[,axesCol[1]]))), length(which(is.na(acc[,axesCol[2]])))))] #compare the number of NAs and exclude the one with more
-          acc[,axesToDrop] <- NULL
-          axesCol <- grep("acceleration.axes|acceleration_axes", names(acc), value=T)
-        }
-        if(median(as.numeric(nchar(as.character(acc[, accRawCol]))))>100){
-        # Exclude ACC data that have only X or Y axis
-        acc <- acc[which(!as.character(acc[, axesCol]) %in% c("X","Y")),]
+      }
+      if(median(as.numeric(nchar(as.character(acc[, accRawCol]))))>100){
+        # Exclude ACC data that are not triaxial
+        acc <- acc[which(as.character(acc[, axesCol]) == "XYZ"),]
         # Exclude rows with missing acc data
         acc <- acc[which(complete.cases(acc[, accRawCol])),]
         # !!ACC were already associated to the GPS in the previous step, so we can simply use the same acc_event_id to retrieve the correct ACC burst 
@@ -482,7 +464,7 @@ lapply(flsToTransform, function(f)try({
       if(nrow(gpsAcc[which(gpsAcc$meanVedba==0),])>0){warning("This study contains meanVedba values = 0. Please double check!")}
       return(gpsAcc)
     }
-    }), .parallel=F)
+  }), .parallel=F)
   # Remove potential individuals that returned errors during download
   gpsAcc_ls <- gpsAcc_ls[!vapply(gpsAcc_ls, is.error, logical(1))]
   # Exclude empty elements from the list, bind and save

@@ -1,7 +1,9 @@
 
-#____________________________________________________________________
-# TEST EFFECT OF SAMPLING FREQUENCY ON SPEED ESTIMATES AND COT MODEL
-#____________________________________________________________________
+#__________________________________________________________________________
+# S11 - Test effect of sampling frequency on speed estimates and COT model
+#__________________________________________________________________________
+
+# The numbers S11 corresponds to the section of the SM in which this analysis is shown
 
 library(phylolm)
 library(lme4)
@@ -20,13 +22,14 @@ library(rr2) #R2 for phylo models
 #______________________________________________________________
 
 
-# folder where the data files from the repository were downloaded and where the results from script 8 were saved
+# folder where the data files from the repository were downloaded and where the results from previous scripts were saved
 setwd("...")
+dir.create("SupplFigures")
 
-# Import model dataset with COT calculations and new soar/flap categories
-allSegmDfs <- readRDS("finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.rds")
+# Import model dataset with COT calculations and new soar/flap categories (line 191 of script 9)
+allSegmDfs <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv")
 # Import the majority-rule consensus (MRC) of the 1000 Ericson trees
-tree <- read.nexus("MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
+tree <- read.nexus("ModelData/MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
 
 #_________________________________________________
 # Explore sampling frequency and speed per segment and effects on species' average
@@ -269,7 +272,7 @@ plot_HR <- ggplot(data_HR, aes(x=X1, y=Y_sp, col=X2)) +
   )
 
 library(patchwork)
-pdf("Revision/NewSupplFigures/phylolm_ccspeed_bodymass_highRes.pdf", width = 18,height = 6)
+pdf("SupplFigures/phylolm_ccspeed_bodymass_highRes.pdf", width = 18,height = 6)
 (plot_full | plot_HR) + plot_layout(guides = "collect") & theme(legend.position = "none")
 dev.off()
 
@@ -398,7 +401,7 @@ plot_HR_COT <- ggplot(data_HR, aes(x=X1, y=Y, col=X2)) +
   )
 
 library(patchwork)
-pdf("Revision/NewSupplFigures/phylolm_ccspeedCOT_bodymass_highRes_panelsABCD.pdf", width = 18,height = 12)
+pdf("SupplFigures/phylolm_ccspeedCOT_bodymass_highRes_panelsABCD.pdf", width = 18,height = 12)
 combined_plot <- 
   (plot_full + plot_HR) /
   (plot_full_COT + plot_HR_COT)

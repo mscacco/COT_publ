@@ -1,5 +1,14 @@
 
+# The numbers S8-S9 correspond to the section of the SM in which this analysis is shown
+
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
+dir.create("SupplFigures")
+
+# To run most of this script no datasets are required as the equations used are taken from the literature (see references within the script)
+# with the exception of a dataset provided as part of the github repo, and the flapping MR model produced in step 0C (flappingModel_GuiguenoData.RData)
+
 
 #________________________________________________
 # S8 - EXPLORE ALTERNATIVE REFERENCE COT LINES
@@ -14,6 +23,7 @@ COTmammals_williams <- 10.02 * seq_mass_kg^(-0.31) # from Williams 1999 - cost e
 
 #____________________________
 # Running/walking
+
 COTrun_alex <- 10.7 * seq_mass_kg^(-0.32) # Alexander 2003 from Taylor 1982
 
 alloSpeed_Heglund_ms <- (5.5 * seq_mass_kg^(0.24)) / 3.6 # allometric scaling of "physiologically similar speed" being running speed at trot-galop gait transition, obtained from HEGLUND, N. C, TAYLOR, C. R. & MCMAHON, T. A. (1974)
@@ -60,6 +70,7 @@ plot_run <- function() {
 
 #___________________
 # Flying
+
 COTflight_alex <- (3.6 * seq_mass_kg^(-0.31)) # from Alexander 2003
 COTflight_tucker <- 5.2 * seq_mass_kg^(-0.23) # from Tucker 1973 - bird metabolism during flight
 #COTflight_schmidt <- 5.40 * seq_mass_kg^(-0.2439) # from Schmidt Nielsen 1972, only 5 values, R2 of 0.3
@@ -120,6 +131,7 @@ plot_fly2 <- function() {
 
 #__________________
 # Swimming
+
 COTswim_alex <- 1.1 * seq_mass_kg^(-0.38) # Alexander 2003 from Videler 1993
 COTswim_brett <- 2.15 * seq_mass_kg^(-0.25) # from Brett 1964
 COTmarineMamm_williams <- 7.79 * seq_mass_kg^(-0.29) # data from several sources, equation by Williams 1999 - cost efficient swimming in marine mammals
@@ -144,7 +156,7 @@ plot_swim <- function() {
 #_______________________
 
 
-pdf("Revision/NewSupplFigures/alternative_COT_lines.pdf", width = 11,height = 8)
+pdf("SupplFigures/alternative_COT_lines.pdf", width = 11,height = 8)
 
 layout(matrix(c(1,2,3,4,4,4), nrow=2, byrow=T), widths = c(1,1,1,1.5))
 #layout.show(4)
@@ -189,7 +201,7 @@ legend(-2,6.2,
 dev.off()
 
 
-pdf("Revision/NewSupplFigures/alternative_COT_lines_onlyABC.pdf", width = 13,height = 5)
+pdf("SupplFigures/alternative_COT_lines_onlyABC.pdf", width = 13,height = 5)
 
 layout(matrix(c(1,2,3), nrow=1, byrow=T), widths = c(1,1,1))
 
@@ -210,7 +222,8 @@ library(afpt)
 library(readxl)
 library(writexl)
 
-dat <- read_excel("species_morpho_means_forAFPT.xlsx") # file provided in the github folder with scripts
+# import file provided in the github folder with scripts
+dat <- read_excel("species_morpho_means_forAFPT.xlsx") 
 
 dat$Vmr <- NA_real_
 
@@ -323,7 +336,8 @@ head(dummyDf_prop)
 summary(dummyDf_prop)
 
 # calculate MR of flapping based on body mass
-load("DataFinalSummary/flappingModel_KylesData.RData") #object modBirds, from script 0C
+load("DataFinalSummary/flappingModel_GuiguenoData.RData") #object modBirds, from script 0C
+
 # Guigueno gives us a MR in Watts (J/s) and it tells us that the power is about 57.5 * Mass^(0.7806)
 dummyDf_prop$MR_flap_guigueno2019 <- exp(predict(modBirds, newdata = data.frame(log_bodyMass_Kg=log(dummyDf_prop$mass_kg))))
 
@@ -395,7 +409,7 @@ dummyDf_prop_final <- rbind(dummyGuigueno, dummyAlexander)
 sub <- dummyDf_prop_final
 
 
-pdf("Revision/NewSupplFigures/EffectOnCOT_differentBMR_differentMR_speedAlexander1998.pdf", 10, 10)
+pdf("SupplFigures/EffectOnCOT_differentBMR_differentMR_speedAlexander1998.pdf", 10, 10)
 
 layout(matrix(c(1,2,3,4), nrow=2, byrow=T))
 
@@ -455,58 +469,24 @@ lm(log(overall_COT_McKechnie_birds_Jkgm) ~ log(mass_kg),
    data=sub_test[sub_test$MRsource=="Alexander 2003",])
 
 
-# # Reshape df to fit ggplot (different COT estimations in rows instead of columns)
-# library(tidyr)
-# library(dplyr)
-# library(ggplot2)
-# df_long <- dummyDf_prop_final %>%
-#   pivot_longer(cols = starts_with("overall_COT"), 
-#                names_to = "BMR_source", 
-#                values_to = "overall_COT_Jkgm")
-# 
-# # summarise COT values for each group
-# df_summarized <- df_long %>%
-#   group_by(BMR_source, MRsource, log(mass_kg)) %>%
-#   summarize(
-#     mean_COT = mean(log(overall_COT_Jkgm)),   # Average COT per bodymass per group
-#     sd_COT = sd(log(overall_COT_Jkgm)),       # Standard deviation
-#     se_COT = sd_COT / sqrt(n()),              # Standard error
-#     ci_lower = mean_COT - 1.96 * se_COT,      # Lower 95% CI
-#     ci_upper = mean_COT + 1.96 * se_COT       # Upper 95% CI
-#   )
-# table(df_summarized$BMR_source)
-# table(df_summarized$MRsource)
-# 
-# df_summarized$BMR_source <- gsub("overall_COT_|_Jkgm","",df_summarized$BMR_source)
-# 
-# # Plot
-# ggplot(df_summarized, aes(x = `log(mass_kg)`, y = mean_COT, color = BMR_source, group = BMR_source)) +
-#   geom_line(size = 2) +                         # Line plot for each COT group
-#   geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper, fill = BMR_source), 
-#               alpha = 0.05, linetype = "blank") + # Confidence intervals
-#   labs(x = "log of Body Mass", y = "log of overall COT (J/(kg * m))", 
-#        #title = "COT vs Body Mass with Confidence Intervals",
-#        color = "COT Group", fill = "COT Group") +
-#   theme_minimal() +
-#   facet_wrap(~MRsource) +           # Create facets for each metabolic rate source
-#   theme(legend.position = "top")    # Optional: position legend at the top
-# ggsave("Plots/finalPlots/EffectOnCOT_differentBMR_differentMR_allPropsAllSpeeds_gg.pdf", width =13,height=7) 
-# 
+#_______________________________________________
+# EXPLORE EFFECT OF CALCULATION IN OUR DATASET
+#_______________________________________________
 
-#_______________________________________________
-# EXPLORE EFFECT OF CALCULATION IN OUR DATASET!
-#_______________________________________________
+# To run this last part of the script we also need the gps and radar model datasets
+# "ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv" (last saved at line 191 of script 9)
+# "ModelData/RADAR_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.csv" (produced at line 199 of script 1-9_RadarData...)
 
 #__________________________________
 ## Summary of our species, both gps and radar
 ## in terms of body mass, proportion of flapping and speed
 
-# Import our data, both gps and radar
-gps <- readRDS("DataFinalSummary/finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.rds")
-radar <- readRDS("DataFinalSummary/RADARdata_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.rds")
+# Import our data, both gps and radar.
+gps <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv")
+radar <- read.csv("ModelData/RADAR_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.csv")
 
-# Import kile's MR model
-load("DataFinalSummary/flappingModel_KylesData.RData") #object modBirds, from script 0C
+# Import the MR model produced in step 0C using Guigueno 2019 data
+load("DataFinalSummary/flappingModel_GuiguenoData.RData") #object modBirds, from script 0C
 
 # summarise speed prop of flapping and body mass
 speciesSummary <- rbind(group_by(gps, species=species) %>% summarise(mass_kg=unique(Body_mass_kg), 
@@ -603,5 +583,5 @@ COT_table_flap
 
 
 # Export
-write.csv(COT_table_soar, "Tables/COT_BMR_effects_soarers.csv", row.names = FALSE)
-write.csv(COT_table_flap, "Tables/COT_BMR_effects_flappers.csv", row.names = FALSE)
+write.csv(COT_table_soar, "SupplFigures/COT_BMR_effects_soarers.csv", row.names = FALSE)
+write.csv(COT_table_flap, "SupplFigures/COT_BMR_effects_flappers.csv", row.names = FALSE)

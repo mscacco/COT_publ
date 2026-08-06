@@ -59,6 +59,8 @@ acc_studies_flying <- acc_studies[grep(acc_studies$taxon_ids, pattern=paste(c(te
 
 setwd("...")
 
+dir.create("DataAvailable")
+
 creds <- movebankLogin() #TeamWikelski & martina.scacco
 
 # Exploratory analysis on available data of birds:
@@ -84,7 +86,7 @@ acc_studies_flying <- acc_studies_flying[,c("name","id",
                                           "taxon_ids","license_type","license_terms")]
 colnames(acc_studies_flying)[1:2] <- c("study_name","study_id")
 
-write.csv(acc_studies_flying, file="./DataAvailable/GpsAcc_MovebankDatasets/ACC_StudiesList_BirdsBats_June2022.csv", row.names = F)
+write.csv(acc_studies_flying, file="./DataAvailable/ACC_StudiesList_BirdsBats_June2022.csv", row.names = F)
 
 # Studies can contain more than 1 species (separated by comma)
 table(acc_studies_flying$taxon_ids)
@@ -108,7 +110,7 @@ acc_flying_sp_allStudies <- do.call(rbind, lapply(1:nrow(acc_studies_flying), fu
  return(acc)
 }))
 
-write.csv(acc_flying_sp_allStudies, file="./DataAvailable/GpsAcc_MovebankDatasets/ACC_StudiesList_BirdsBats_June2022_perSpecies.csv", row.names = F)
+write.csv(acc_flying_sp_allStudies, file="./DataAvailable/ACC_StudiesList_BirdsBats_June2022_perSpecies.csv", row.names = F)
 
 
 #___________________________
@@ -133,6 +135,6 @@ acc_studies_download$study_name[acc_studies_download$license_type=="CC_0" & acc_
 length(unique(acc_studies_download$study_id))==nrow(acc_studies_download)
 acc_studies_download <- acc_studies_download[!duplicated(acc_studies_download[,c("study_name","study_id","timestamp_first_deployed_location","timestamp_last_deployed_location")]),
                                              ]
-write.csv(acc_studies_download, file="./DataAvailable/GpsAcc_MovebankDatasets/allACCstudies_BirdsBats_downloadPermissionT_new.csv", row.names = F)
+write.csv(acc_studies_download, file="./DataAvailable/allACCstudies_BirdsBats_downloadPermissionT_new.csv", row.names = F)
 
 

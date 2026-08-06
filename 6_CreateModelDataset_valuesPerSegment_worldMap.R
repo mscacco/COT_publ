@@ -6,10 +6,13 @@
 library(lubridate)
 library(data.table)
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+# which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
 
 # Load the final dataset (point by point) with all the annotated atmospheric variables from step 5(A-B)
-finalDF <- readRDS("DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds")
+# This is made available directly in Edmond.
+finalDF <- readRDS("BiologgingData/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds")
 
 #__________________________________________________
 # Calculate a summary information per SEGMENT ####
@@ -116,13 +119,15 @@ segmentDf_sub$species_phy[which(segmentDf_sub$species == "Anthropoides virgo")] 
 # now they all match (except the 2 bat species)
 unique(segmentDf_sub$species_phy)[!unique(segmentDf_sub$species_phy) %in% treeDf$Scientific]
 
-# re-save dataset to use in step 6B
+# re-save dataset to use in step 6B. This is an intermediary result not stored in Edmond.
 saveRDS(segmentDf_sub, file="DataFinalSummary/finalSummaryDataset_perSegment_fromFix_Feb2025_max10hours.rds")
 
 
 #___________________
 # MAP for FIG 1 ####
 #___________________
+
+dir.create("Plots/FinalPlots")
 
 #________________________________________________________________________________________________________
 # Use the point dataset and the segment to map the trajectories of all individuals available for analysis
@@ -147,7 +152,7 @@ ext_to_bb <- function(x, f){ # f being a multiplier of how much, proportionally,
 }
 
 # filter df with all GPS fixes to contain only the trajectories of individuals selected for analyses
-pointDf <- readRDS("DataFinalSummary/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds")
+pointDf <- readRDS("BiologgingData/FinalDf_perPoint_VedbaGs_flappingProbs_ENV.rds")
 segmentDf <- readRDS("DataFinalSummary/finalSummaryDataset_perSegment_fromFix_Feb2025_max10hours.rds")
 pointDf_sub <- pointDf[pointDf$individual.local.identifier %in% unique(segmentDf$individualID),]
 pointDf_sub <- pointDf_sub[pointDf_sub$track_flight_id %in% unique(segmentDf$segmentID),]
@@ -199,8 +204,6 @@ commuting_inset <- commuting_inset %>% mutate(study_species = paste(study.name, 
 #_____________
 # Background map and colors
 
-dir.create("Revision/NewSupplFigures/globalMap")
-
 world <- ne_countries(scale = "medium", returnclass = "sf")
 world <- world[world$continent != "Antarctica", ]
 
@@ -240,7 +243,7 @@ map
 
 # save for inkscape
 library(svglite)
-ggsave("Revision/NewSupplFigures/globalMap/newMap1_commuting.svg",
+ggsave("Plots/FinalPlots/newMap1_commuting.svg",
   plot = map, device = svglite, width = 10, height = 6)
 
 #_____________
@@ -266,7 +269,7 @@ zoom2 <- ggplot() +
   theme(legend.position = "none")
 zoom2
 
-ggsave("Revision/NewSupplFigures/globalMap/insetTurkey.svg",
+ggsave("Plots/FinalPlots/insetTurkey.svg",
        plot = zoom2, device = svglite, width = 5, height = 2)
 
 
@@ -289,34 +292,8 @@ zoom3 <- ggplot() +
   theme(legend.position = "none")
 zoom3
 
-ggsave("Revision/NewSupplFigures/globalMap/insetKitty.svg",
+ggsave("Plots/FinalPlots/insetKitty.svg",
        plot = zoom3, device = svglite, width = 5, height = 3)
-
-# # For Sula
-# s <- "AllisonPatterson_PEBO_Sula variegata"
-# lines_s <- filter(lines_inset, study_species == s)
-# segms_s <- filter(commuting_inset, study_species == s)
-# 
-# col <- finalPalette[names(finalPalette) == s]
-# 
-# # crop right extent
-# bb1 <- ext_to_bb(x=lines_s, f=0.2)
-# world_bb <- st_crop(world, bb1)
-# 
-# zoom_sula <- ggplot() +
-#   geom_sf(data = world_bb, fill = "grey90", color = "grey50", linewidth = 0.2) +
-#   geom_sf(data = lines_s, color = col, linewidth = 0.5, alpha = 0.8) +
-#   #geom_sf(data = segms_s, color = col, linewidth = 0.5, alpha = 0.8) +
-#   geom_sf(data = bb1, fill = NA, color = "black", linewidth = 0.3, alpha = 0.8) +
-#   coord_sf(clip = "on") +
-#   theme_void() +
-#   theme(legend.position = "none")
-# zoom_sula
-# 
-# ggsave("Revision/NewSupplFigures/globalMap/insetSula.svg",
-#        plot = zoom_sula, device = svglite, width = 5, height = 6)
-
-
 
 # Add box of the three insets to the world map
 map_bbox <- map + 
@@ -325,6 +302,6 @@ map_bbox <- map +
   geom_sf(data = bb3, fill = NA, color = "black", linewidth = 0.3)
 map_bbox
 
-ggsave("Revision/NewSupplFigures/globalMap/newMap1_commuting_insetsBB.svg",
+ggsave("Plots/FinalPlots/newMap1_commuting_insetsBB.svg",
        plot = map_bbox, device = svglite, width = 10, height = 6)
 

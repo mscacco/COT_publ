@@ -4,6 +4,12 @@
 #_________________________
 ## Digitise theoretical COT lines based on literature
 
+# Set as wd the path where you stored the content downloaded form the Edmond repository
+setwd("...")
+
+# Create output directory, keep this name to ensure consistency through scripts
+dir.create("DataFinalSummary")
+
 #_______________________________
 # Based on SCHMIDT NIELSEN 1972
 
@@ -45,11 +51,9 @@ theoreticalCOTalex$COTrun_J_KgM <- 10.7*(theoreticalCOTalex$bodyMass_Kg)^(-0.32)
 #_____________________________________
 ## Save and plot theoretical df lines
 
-setwd("...")
 save(theoreticalCOTschmidt, theoreticalCOTalex, 
      file="DataFinalSummary/thereticalCOTs_Nielsen-Alexander.RData")
 
-pdf("Plots/finalPlots/theoreticalLines.pdf")
 plot(log(COTflight_J_KgM)~log(bodyMass_Kg), data=theoreticalCOTschmidt,
      xlim=c(-6,2.3), ylim=c(0,5),
      xlab="Body mass (Kg)", ylab="Flight cost (J Kg-1 m-1)", 
@@ -64,13 +68,12 @@ lines(log(COTrun_J_KgM)~log(bodyMass_Kg), data=theoreticalCOTalex,
       lty=2, lwd=1.5, col="gold2")
 legend("topright", c("Schmidt-Nielsen 1972, flying","Alexander 2003, flying","Alexander 2003, swimming","Alexander 2003, running"),  
        col=c("magenta3","forestgreen","dodgerblue3","gold2"), bty="n", lty=c(1,2,2,2), lwd=1.5)
-dev.off()
 
 #____________________________
 # EMPIRICAL FLAPPING METABOLIC RATE (from GUIGUENO et al. 2019)
 #____________________________
 
-powerDf_kyle <- read.csv("DataAvailable/EnergyCostEstimation/FlappingPowerValues_Kyle.csv", as.is=T)
+powerDf_kyle <- read.csv("InputData/FlappingPowerValues_Guigueno2019.csv", as.is=T)
 powerDf_kyle$Body_mass_kg <- powerDf_kyle$Body_mass/1000
 powerDf_kyle$log_bodyMass_Kg <- log(powerDf_kyle$Body_mass_kg)
 
@@ -86,9 +89,6 @@ summary(flappers$Body_mass[flappers$Taxon != "Bat"])
 table(flappers$Taxon)
 summary(flappers$MetaRate / flappers$BMR)
 
-sub4Emily <- flappers[flappers$Taxon != "Bat",c("Species","Taxon","Flight_mode","Body_mass_kg","MetaRate")]
-write.csv(sub4Emily, "Plots/finalPlots/newModelPlot_newRunSwim_phyloModels/toKamiEmily/KylesData_sub4model.csv", row.names = F)
-
 # Model "flapping MR ~ body mass", separately for birds and bats
 modBirds <- lm(log(MetaRate)~log_bodyMass_Kg, data=flappers[flappers$Taxon != "Bat",])
 summary(modBirds)
@@ -99,7 +99,7 @@ summary(modBats)
 (betaMassBa <- as.numeric(coefficients(modBats)["log_bodyMass_Kg"]))
 # a 1% increase in body mass causes about 0.78% increase in metabolic rate in birds and a 0.79% in bats
 
-save(modBirds,modBats,betaMassBi,betaMassBa, file = "DataFinalSummary/flappingModel_KylesData.RData")
+save(modBirds,modBats,betaMassBi,betaMassBa, file = "DataFinalSummary/flappingModel_GuiguenoData.RData")
 
 # Now run the same models, but adding the method of MR calculation as covariate:
 table(flappers$Method)
