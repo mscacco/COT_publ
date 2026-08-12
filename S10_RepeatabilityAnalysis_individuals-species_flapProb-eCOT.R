@@ -16,8 +16,8 @@ dir.create("SupplFigures")
 # Load the dataset created in script 8
 # This includes both the flapping probability and eCOT calculations averaged per commuting segment
 allSegmDfs_withOutliers <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025.csv")
-# same but excludes the outlier individuals (the dataset that was used in all analyses after script 8 with additional columns added at line 191 of script 9)
-allSegmDfs_noOutliers <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv")
+# same but excludes the outlier individuals (the dataset that was used in all analyses after script 8)
+allSegmDfs_noOutliers <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers_soarFlap.csv")
 
 #_______________________
 # Proportion of flapping

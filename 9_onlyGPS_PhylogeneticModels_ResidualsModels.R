@@ -23,8 +23,8 @@ library(rr2) #R2 for phylo models
 # folder where the data files from the repository were downloaded and where the results from script 8 were saved
 setwd("...")
 
-# Import model dataset with COT calculations and new soar/flap categories
-allSegmDfs <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv")
+# Import model dataset with COT calculations and new soar/flap categories saved in script 8
+allSegmDfs <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers_soarFlap.csv")
 # Import the majority-rule consensus (MRC) of the 1000 Ericson trees
 tree <- read.nexus("ModelData/MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
 
@@ -188,8 +188,8 @@ pdf("Plots/finalPlots/soarersFlappers_boxplotCOTresiduals_Feb2025.pdf", 6,5)
 boxplot(COT_residuals~soarFlap_pgls, data=allSegmDfs_mode, col=alpha(c("gold2","dodgerblue3"), 0.6))
 dev.off()
 
-# Re-save the dataset with the additional columns Yfitted and COTresiduals
-write.csv(allSegmDfs_mode, file="ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv", row.names = F)
+# Save the dataset with the additional columns Yfitted and COTresiduals
+write.csv(allSegmDfs_mode, file="ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers_soarFlap_residuals.csv", row.names = F)
 
 #____________________________________
 ## Density plots and residual models

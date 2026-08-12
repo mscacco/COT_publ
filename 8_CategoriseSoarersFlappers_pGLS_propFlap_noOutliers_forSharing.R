@@ -364,8 +364,8 @@ allSegmDfs_soarFlap <- merge(allSegmDfs_noOutliers, species_soarFlap, by="specie
 anyNA(allSegmDfs_soarFlap$soarFlap_pgls)
 table(summarise(group_by(allSegmDfs_soarFlap, species_phy), unique(soarFlap_pgls))[,2])
 
-# re-save the original dataset with the added soar/flap categories
-write.csv(allSegmDfs_soarFlap, file="ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv", row.names = F)
+# Save the same dataset with the added soar/flap categories
+write.csv(allSegmDfs_soarFlap, file="ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers_soarFlap.csv", row.names = F)
 
 #____________
 # Table S4

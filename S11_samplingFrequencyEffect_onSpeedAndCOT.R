@@ -26,8 +26,8 @@ library(rr2) #R2 for phylo models
 setwd("...")
 dir.create("SupplFigures")
 
-# Import model dataset with COT calculations and new soar/flap categories (line 191 of script 9)
-allSegmDfs <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv")
+# Import model dataset with COT calculations and new soar/flap categories produced in script 8
+allSegmDfs <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers_soarFlap.csv")
 # Import the majority-rule consensus (MRC) of the 1000 Ericson trees
 tree <- read.nexus("ModelData/MRCtree_DendroPy_from1000_Ericson_Feb2025_pruned.tre")
 

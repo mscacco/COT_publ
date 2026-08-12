@@ -474,15 +474,15 @@ lm(log(overall_COT_McKechnie_birds_Jkgm) ~ log(mass_kg),
 #_______________________________________________
 
 # To run this last part of the script we also need the gps and radar model datasets
-# "ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv" (last saved at line 191 of script 9)
+# "ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers_soarFlap_residuals.csv" (saved at line 191 of script 9)
 # "ModelData/RADAR_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.csv" (produced at line 199 of script 1-9_RadarData...)
 
 #__________________________________
 ## Summary of our species, both gps and radar
 ## in terms of body mass, proportion of flapping and speed
 
-# Import our data, both gps and radar.
-gps <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers.csv")
+# Import our data, both gps with soar flap categories (produced in script 8) and radar.
+gps <- read.csv("ModelData/BIOLOGGING_finalSummaryDataset_perSegment_fromFix+COTvariables_Feb2025_noOutliers_soarFlap.csv")
 radar <- read.csv("ModelData/RADAR_finalSummaryDataset_perEcho_COTvariables_WFF-month_echoDurFilter.csv")
 
 # Import the MR model produced in step 0C using Guigueno 2019 data
