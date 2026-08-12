@@ -26,7 +26,7 @@ doParallel::registerDoParallel(6)
 is.error <- function(x) inherits(x, "try-error")
 
 
-# Set as wd the path where you stored the content downloaded form the Edmond repository
+# Set as wd the path where you stored the content downloaded from the Edmond repository
 setwd("...")
 
 # Create folder to store processed data, study by study

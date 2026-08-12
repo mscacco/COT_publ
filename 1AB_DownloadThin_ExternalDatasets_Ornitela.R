@@ -22,7 +22,7 @@ doParallel::registerDoParallel(5)
 
 options(digits.secs=3)
 
-# Set as wd the path where you stored the content downloaded form the Edmond repository
+# Set as wd the path where you stored the content downloaded from the Edmond repository
 setwd("...")
 
 # Create folder to store processed data, study by study

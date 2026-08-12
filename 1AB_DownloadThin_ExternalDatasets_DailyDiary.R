@@ -14,7 +14,7 @@ library(amt)
 library(lubridate)
 library(geosphere)
 
-# Set as wd the path where you stored the content downloaded form the Edmond repository
+# Set as wd the path where you stored the content downloaded from the Edmond repository
 setwd("...")
 
 # Create folder to store processed data, study by study

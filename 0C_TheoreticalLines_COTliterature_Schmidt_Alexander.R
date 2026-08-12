@@ -4,7 +4,7 @@
 #_________________________
 ## Digitise theoretical COT lines based on literature
 
-# Set as wd the path where you stored the content downloaded form the Edmond repository
+# Set as wd the path where you stored the content downloaded from the Edmond repository
 setwd("...")
 
 # Create output directory, keep this name to ensure consistency through scripts

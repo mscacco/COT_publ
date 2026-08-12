@@ -13,7 +13,7 @@
 codePath <- "..."
 source(paste0(codePath, "COT_publ/ERA5_functions_download_annotate_calculateUpliftProxies_2024Aug.R")) #For direction360
 
-# Set as wd the path where you stored the content downloaded form the Edmond repository
+# Set as wd the path where you stored the content downloaded from the Edmond repository
 # which shuld also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
 

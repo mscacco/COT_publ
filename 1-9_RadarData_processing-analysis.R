@@ -10,7 +10,7 @@
 library(data.table)
 library(dplyr)
 
-# Set as wd the path where you stored the content downloaded form the Edmond repository
+# Set as wd the path where you stored the content downloaded from the Edmond repository
 setwd("...")
 
 # store the path where you downloaded the scripts

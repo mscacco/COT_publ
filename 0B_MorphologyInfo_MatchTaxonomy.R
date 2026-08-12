@@ -9,7 +9,7 @@
 # - the Avonet dataset, available from "AVONET: morphological, ecological and geographical data for all birds". Ecol. Lett. 25, 581–597 (2022)
 # - the body mass dataset, available from "EltonTraits 1.0: Species-level foraging attributes of the world's birds and mammals". Ecology 95:2027 (2014) 
 
-# Set as wd the path where you stored the content downloaded form the Edmond repository
+# Set as wd the path where you stored the content downloaded from the Edmond repository
 setwd("...")
 
 #____________________________________________

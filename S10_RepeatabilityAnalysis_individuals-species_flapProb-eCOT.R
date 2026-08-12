@@ -8,7 +8,7 @@
 library(rptR)
 library(dplyr)
 
-# Set as wd the path where you stored the content downloaded form the Edmond repository
+# Set as wd the path where you stored the content downloaded from the Edmond repository
 # which should also be the parent folder where you stored all intermediate results of previous scripts.
 setwd("...")
 dir.create("SupplFigures")
