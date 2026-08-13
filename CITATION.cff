@@ -1,12 +1,18 @@
 cff-version: 1.2.0
 message: "If you use this code, please cite it as below."
-title: "Code supporting the study: Airflows redefine the cost of aerial transport in the wild"
-version: 1.0.0
-date-released: 2026-01-01
-
 authors:
-  - family-names: Scacco
-    given-names: Martina
+  - family-names: "Scacco"
+    given-names: "Martina"
+    orcid: "https://orcid.org/0000-0003-4821-4051"
+title: "COT_publ: Code supporting the study: 'Airflows redefine the cost of aerial transport in the wild'"
+version: 1.0.0
+date-released: "2026-08-XX"
+repository-code: "https://github.com/mscacco/COT_publ"
+doi: 10.5281/zenodo.XXXXXXX   # the CODE DOI, filled in after the GitHub release
+references:
+  - type: dataset
+    title: "Data supporting 'Airflows redefine the cost of aerial transport in the wild'"
+    doi: 10.5281/zenodo.21915776
 
 preferred-citation:
   type: article
