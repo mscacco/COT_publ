@@ -7,5 +7,5 @@ This study involved the analysis of flight segments from 50 bird and bat species
 
 For extensive details about the aim and results of the study and the methodology underlying the code shared in this repository, please refer to the full text and material and methods of the paper "Airflows redefine the cost of aerial transport in the wild".
 
-The datasets supporting the findings of this study and needed to run the code shared are deposited at the Edmond repository at: ...
+The datasets supporting the findings of this study and needed to run the code shared are deposited on Zenodo at: 10.5281/zenodo.21915776
 Detailed explanation of the content of each dataset, as well as from which script each dataset is produced are reported in the repository metadata. Within the R scripts it is also reported which file is necessary to run the different parts of code, as well as links to where to download additional necessary data.
